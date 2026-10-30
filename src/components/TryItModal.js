@@ -14,7 +14,10 @@
 
     const tryIt = state.tryIt;
     const activeTab = tryIt.channel || (agent.channels.voice ? 'voice' : 'email');
-    const speechStackName = (agent.voiceModelOverride?.speechStack === 'realtime' || agent.speechStack === 'realtime')
+    const effectiveStack = (typeof window.getEffectiveSpeechStack === 'function')
+      ? window.getEffectiveSpeechStack(agent)
+      : (agent.voiceModelOverride?.enabled ? agent.voiceModelOverride.speechStack : agent.speechStack) || 'cascaded';
+    const speechStackName = effectiveStack === 'realtime'
       ? 'Realtime Voice'
       : 'Cascaded STT/TTS';
 
@@ -233,7 +236,7 @@
                     <div style="display: flex; gap: 8px;">
                       <button 
                         className="btn btn-secondary btn-sm" 
-                        onClick=${() => actions.addToast(`Call Log: ${tryIt.voiceTurns.length} turns recorded, duration ${formatTimer(tryIt.callSeconds)}.`, 'info')}
+                        onClick=${() => actions.toggleCallLogs()}
                       >
                         ${renderIcon('file-text', { size: 13 })}
                         <span>View Call Logs</span>
@@ -356,6 +359,65 @@
 
           </div>
         </div>
+
+        ${tryIt.callLogsOpen ? html`
+          <div className="modal-backdrop" onClick=${() => actions.toggleCallLogs()} style="z-index: 1050; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.45); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(2px);">
+            <div className="modal-dialog" onClick=${(e) => e.stopPropagation()} style="background: #FFFFFF; border-radius: var(--radius-lg); box-shadow: var(--shadow-xl); max-width: 620px; width: 90%; overflow: hidden; display: flex; flex-direction: column;">
+              <div className="modal-header" style="display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid var(--border-color);">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  ${renderIcon('file-text', { size: 18, color: 'var(--color-primary)' })}
+                  <h3 style="font-size: 16px; font-weight: 700; margin: 0; color: var(--text-primary);">Call Logs — ${agent.name}</h3>
+                </div>
+                <button className="btn-icon" onClick=${() => actions.toggleCallLogs()}>
+                  ${renderIcon('x', { size: 16 })}
+                </button>
+              </div>
+              <div className="modal-body" style="padding: 20px; max-height: 480px; overflow-y: auto;">
+                ${(!tryIt.callHistory || tryIt.callHistory.length === 0) ? html`
+                  <div style="text-align: center; padding: 30px; color: var(--text-muted); font-size: 13px;">
+                    No completed calls recorded yet. End a live call session to generate a call log.
+                  </div>
+                ` : html`
+                  <div style="display: flex; flex-direction: column; gap: 14px;">
+                    ${tryIt.callHistory.map(log => html`
+                      <div key=${log.id} style="background: #F8FAFC; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 14px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                          <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="font-family: monospace; font-weight: 700; font-size: 13px; color: var(--color-primary);">${log.sessionId}</span>
+                            <span className="badge badge-published" style="font-size: 10px;">${log.endedBy}</span>
+                          </div>
+                          <span style="font-size: 12px; color: var(--text-muted);">${log.timestamp}</span>
+                        </div>
+                        <div style="display: flex; gap: 16px; font-size: 12px; color: var(--text-secondary); margin-bottom: 10px;">
+                          <span>Duration: <strong>${formatTimer(log.duration)}</strong></span>
+                          <span>Turns: <strong>${log.turnsCount}</strong></span>
+                          <span>Stack: <strong>${speechStackName}</strong></span>
+                        </div>
+                        <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: var(--radius-sm); padding: 10px; max-height: 140px; overflow-y: auto; font-size: 12px; line-height: 1.4;">
+                          ${log.turns.map(t => html`
+                            <div key=${t.timestamp + t.speaker} style="margin-bottom: 6px;">
+                              <strong style="color: ${t.speaker === 'caller' ? 'var(--color-primary)' : '#10B981'}; text-transform: capitalize;">${t.speaker}</strong>
+                              <span style="color: var(--text-muted); font-size: 11px; margin-left: 6px;">[${t.timestamp}]</span>:
+                              <span> ${t.text}</span>
+                              ${t.tool ? html`
+                                <span className="badge badge-draft" style="font-size: 10px; margin-left: 6px;">Tool: ${t.tool}</span>
+                              ` : ''}
+                            </div>
+                          `)}
+                        </div>
+                      </div>
+                    `)}
+                  </div>
+                `}
+              </div>
+              <div className="modal-footer" style="padding: 12px 20px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end;">
+                <button className="btn btn-secondary btn-sm" onClick=${() => actions.toggleCallLogs()}>
+                  Close Logs
+                </button>
+              </div>
+            </div>
+          </div>
+        ` : ''}
       </div>
     `;
   }

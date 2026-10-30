@@ -81,6 +81,44 @@ const TTS_PROVIDERS = [
   'ElevenLabs'
 ];
 
+const STT_MODELS_BY_PROVIDER = {
+  'Team default service': [
+    'Team default (Azure Neural v2)',
+    'Enhanced telephony wideband',
+    'Low-latency conversational'
+  ],
+  'Azure Speech Services': [
+    'Provider default (Recommended)',
+    'Latest neural v2',
+    'Enhanced telephony wideband',
+    'Custom acoustic model'
+  ],
+  'Soniox Realtime': [
+    'Soniox general v3',
+    'Soniox telephony v2',
+    'Soniox high-accuracy'
+  ],
+  'Deepgram Nova-2': [
+    'Nova-2 General (Recommended)',
+    'Nova-2 Phonecall',
+    'Nova-2 Conversational AI',
+    'Nova-2 Medical'
+  ],
+  'Google Cloud Speech': [
+    'Chirp v2 (Multilingual)',
+    'Telephony latest_long',
+    'Command and Search'
+  ]
+};
+
+function getEffectiveSpeechStack(agent) {
+  if (!agent) return 'cascaded';
+  if (agent.voiceModelOverride?.enabled) {
+    return agent.voiceModelOverride.speechStack || agent.speechStack || 'cascaded';
+  }
+  return agent.speechStack || 'cascaded';
+}
+
 const TEAM_TOOLS = [
   {
     id: 'kb_search',
@@ -214,6 +252,7 @@ const DEFAULT_AGENT_CONFIG = {
     },
     speech: {
       activeTab: 'stt',
+      silenceTimeout: 400,
       stt: {
         provider: 'Team default service',
         languages: ['en-US', 'de-DE'],
@@ -221,8 +260,7 @@ const DEFAULT_AGENT_CONFIG = {
         segmentationSilenceTimeout: 500,
         customModelId: '',
         sttModel: 'Provider default',
-        profanityFilter: 'Masked',
-        silenceTimeout: 400
+        profanityFilter: 'Masked'
       },
       tts: {
         provider: 'Azure',
@@ -466,8 +504,12 @@ window.ENTERPRISE_DATA = {
   TIMEZONES,
   STT_PROVIDERS,
   TTS_PROVIDERS,
+  STT_MODELS_BY_PROVIDER,
   TEAM_TOOLS,
   GLOBAL_ENTITIES,
   DEFAULT_AGENT_CONFIG,
-  INITIAL_AGENTS
+  INITIAL_AGENTS,
+  getEffectiveSpeechStack
 };
+
+window.getEffectiveSpeechStack = getEffectiveSpeechStack;

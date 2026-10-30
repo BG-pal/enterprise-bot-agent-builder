@@ -96,11 +96,10 @@
                 type="number" 
                 className="form-input" 
                 min="1" 
-                max="20"
                 value=${agent.sharedModel.toolCallLimit}
                 onInput=${(e) => updateShared('toolCallLimit', parseInt(e.target.value, 10) || 1)}
               />
-              <div className="helper-text">Maximum tool invocations per turn. Default is 5.</div>
+              <div className="helper-text">Maximum tool invocations per turn. Default is 5. Accepts integer >= 1.</div>
             </div>
 
             <!-- 4. Temperature -->
@@ -312,9 +311,9 @@
                   `}
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;">
                   <!-- Response Modality -->
-                  <div className="form-group">
+                  <div className="form-group" style="margin-bottom: 0;">
                     <label className="form-label">Response Modality</label>
                     <select 
                       className="form-select"
@@ -327,7 +326,7 @@
                   </div>
 
                   <!-- Reasoning -->
-                  <div className="form-group">
+                  <div className="form-group" style="margin-bottom: 0;">
                     <label className="form-label">Reasoning Effort</label>
                     <select 
                       className="form-select"
@@ -339,17 +338,78 @@
                       `)}
                     </select>
                   </div>
+                </div>
 
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;">
                   <!-- Tool Call Limit -->
-                  <div className="form-group">
+                  <div className="form-group" style="margin-bottom: 0;">
                     <label className="form-label">Tool Call Limit</label>
-                    <input 
-                      type="text" 
-                      className="form-input" 
-                      value=${agent.voiceModelOverride.toolCallLimit}
-                      onInput=${(e) => updateVoiceOverride('toolCallLimit', e.target.value)}
-                    />
-                    <div className="helper-text">Default Inherited</div>
+                    <div style="display: flex; gap: 8px;">
+                      <select 
+                        className="form-select" 
+                        style="width: 130px;"
+                        value=${agent.voiceModelOverride.toolCallLimit === 'Inherited' ? 'Inherited' : 'Custom'}
+                        onChange=${(e) => {
+                          if (e.target.value === 'Inherited') {
+                            updateVoiceOverride('toolCallLimit', 'Inherited');
+                          } else {
+                            updateVoiceOverride('toolCallLimit', 5);
+                          }
+                        }}
+                      >
+                        <option value="Inherited">Inherited</option>
+                        <option value="Custom">Custom</option>
+                      </select>
+                      ${agent.voiceModelOverride.toolCallLimit !== 'Inherited' ? html`
+                        <input 
+                          type="number" 
+                          min="1"
+                          className="form-input" 
+                          value=${agent.voiceModelOverride.toolCallLimit}
+                          onInput=${(e) => updateVoiceOverride('toolCallLimit', parseInt(e.target.value, 10) || 1)}
+                        />
+                      ` : ''}
+                    </div>
+                    <div className="helper-text">Inherited or integer >= 1</div>
+                  </div>
+
+                  <!-- Voice Override Temperature -->
+                  <div className="form-group" style="margin-bottom: 0;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                      <label className="form-label" style="margin: 0;">Temperature</label>
+                      <span style="font-weight: 700; font-size: 13px; color: var(--color-primary); font-family: monospace;">
+                        ${agent.voiceModelOverride.temperature === 'Inherited' ? 'Inherited (0.5)' : agent.voiceModelOverride.temperature}
+                      </span>
+                    </div>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                      <select 
+                        className="form-select" 
+                        style="width: 130px;"
+                        value=${agent.voiceModelOverride.temperature === 'Inherited' ? 'Inherited' : 'Custom'}
+                        onChange=${(e) => {
+                          if (e.target.value === 'Inherited') {
+                            updateVoiceOverride('temperature', 'Inherited');
+                          } else {
+                            updateVoiceOverride('temperature', 0.5);
+                          }
+                        }}
+                      >
+                        <option value="Inherited">Inherited</option>
+                        <option value="Custom">Custom</option>
+                      </select>
+                      ${agent.voiceModelOverride.temperature !== 'Inherited' ? html`
+                        <input 
+                          type="number" 
+                          min="0" 
+                          max="1.0" 
+                          step="0.05"
+                          className="form-input" 
+                          value=${agent.voiceModelOverride.temperature}
+                          onInput=${(e) => updateVoiceOverride('temperature', parseFloat(e.target.value) || 0)}
+                        />
+                      ` : ''}
+                    </div>
+                    <div className="helper-text">Inherited or customized between 0.0 and 1.0</div>
                   </div>
                 </div>
 
@@ -395,48 +455,67 @@
 
                 <!-- Voice History Override -->
                 <div style="padding-top: 14px; border-top: 1px solid var(--border-color);">
-                  <div style="font-weight: 700; font-size: 14px; margin-bottom: 8px;">Voice History Override</div>
-                  <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px;">
+                  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
                     <div>
-                      <label className="form-label">Responses</label>
-                      <input 
-                        type="number" 
-                        className="form-input" 
-                        value=${agent.voiceModelOverride.historyOverride.historyResponses}
-                        onInput=${(e) => {
-                          const val = parseInt(e.target.value, 10) || 5;
-                          updateVoiceOverride('historyOverride', { ...agent.voiceModelOverride.historyOverride, historyResponses: val });
-                        }}
-                      />
-                      <div className="helper-text">Default 5</div>
+                      <div style="font-weight: 700; font-size: 14px; color: var(--text-primary);">Voice History Summary</div>
+                      <div className="text-secondary" style="font-size: 13px;">Condense multi-turn conversation context for voice calls.</div>
                     </div>
-                    <div>
-                      <label className="form-label">Trigger tokens</label>
+                    <label className="toggle-switch">
                       <input 
-                        type="number" 
-                        className="form-input" 
-                        value=${agent.voiceModelOverride.historyOverride.triggerTokens}
-                        onInput=${(e) => {
-                          const val = parseInt(e.target.value, 10) || 15000;
-                          updateVoiceOverride('historyOverride', { ...agent.voiceModelOverride.historyOverride, triggerTokens: val });
-                        }}
+                        type="checkbox" 
+                        checked=${agent.voiceModelOverride.historyOverride?.enabled ?? true}
+                        onChange=${(e) => updateVoiceOverride('historyOverride', {
+                          ...agent.voiceModelOverride.historyOverride,
+                          enabled: e.target.checked
+                        })}
                       />
-                      <div className="helper-text">Default 15000</div>
-                    </div>
-                    <div>
-                      <label className="form-label">Target tokens</label>
-                      <input 
-                        type="number" 
-                        className="form-input" 
-                        value=${agent.voiceModelOverride.historyOverride.targetTokens}
-                        onInput=${(e) => {
-                          const val = parseInt(e.target.value, 10) || 10000;
-                          updateVoiceOverride('historyOverride', { ...agent.voiceModelOverride.historyOverride, targetTokens: val });
-                        }}
-                      />
-                      <div className="helper-text">Default 10000</div>
-                    </div>
+                      <span className="toggle-slider"></span>
+                    </label>
                   </div>
+
+                  ${(agent.voiceModelOverride.historyOverride?.enabled ?? true) ? html`
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px;">
+                      <div>
+                        <label className="form-label">Responses</label>
+                        <input 
+                          type="number" 
+                          className="form-input" 
+                          value=${agent.voiceModelOverride.historyOverride.historyResponses}
+                          onInput=${(e) => {
+                            const val = parseInt(e.target.value, 10) || 5;
+                            updateVoiceOverride('historyOverride', { ...agent.voiceModelOverride.historyOverride, historyResponses: val });
+                          }}
+                        />
+                        <div className="helper-text">Default 5</div>
+                      </div>
+                      <div>
+                        <label className="form-label">Trigger tokens</label>
+                        <input 
+                          type="number" 
+                          className="form-input" 
+                          value=${agent.voiceModelOverride.historyOverride.triggerTokens}
+                          onInput=${(e) => {
+                            const val = parseInt(e.target.value, 10) || 15000;
+                            updateVoiceOverride('historyOverride', { ...agent.voiceModelOverride.historyOverride, triggerTokens: val });
+                          }}
+                        />
+                        <div className="helper-text">Default 15000</div>
+                      </div>
+                      <div>
+                        <label className="form-label">Target tokens</label>
+                        <input 
+                          type="number" 
+                          className="form-input" 
+                          value=${agent.voiceModelOverride.historyOverride.targetTokens}
+                          onInput=${(e) => {
+                            const val = parseInt(e.target.value, 10) || 10000;
+                            updateVoiceOverride('historyOverride', { ...agent.voiceModelOverride.historyOverride, targetTokens: val });
+                          }}
+                        />
+                        <div className="helper-text">Default 10000</div>
+                      </div>
+                    </div>
+                  ` : ''}
                 </div>
               </div>
             ` : ''}

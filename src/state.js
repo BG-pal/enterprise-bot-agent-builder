@@ -98,7 +98,9 @@
       emailBody: '',
       isReplying: false,
       emailThread: [],
-      expandedDetails: {}
+      expandedDetails: {},
+      callHistory: [],
+      callLogsOpen: false
     },
 
     // Voice Settings Accordions & inputs (all collapsed initially)
@@ -134,14 +136,20 @@
     profileMenuOpen: false,
     
     // Toast alerts
-    toasts: []
+    toasts: [],
+
+    // Multi-snapshot tracking (Phase 8)
+    lastSavedSnapshot: null,
+    lastPublishedSnapshot: null
   };
 
   // Initialize current agent
   const defaultAgent = state.agents.find(a => a.id === state.currentAgentId) || state.agents[0];
   if (defaultAgent) {
     state.currentAgent = clone(defaultAgent);
+    state.lastSavedSnapshot = clone(defaultAgent);
     state.savedSnapshot = clone(defaultAgent);
+    state.lastPublishedSnapshot = defaultAgent.status === 'Published' ? clone(defaultAgent) : null;
   }
 
   function notify() {
@@ -162,18 +170,24 @@
   }
 
   function checkDirty() {
-    if (!state.currentAgent || !state.savedSnapshot) {
+    if (!state.currentAgent || !state.lastSavedSnapshot) {
       state.hasUnsavedChanges = false;
       return;
     }
     const currentStr = JSON.stringify(state.currentAgent);
-    const savedStr = JSON.stringify(state.savedSnapshot);
+    const savedStr = JSON.stringify(state.lastSavedSnapshot);
     const isDirty = currentStr !== savedStr;
     state.hasUnsavedChanges = isDirty;
-    if (isDirty && state.currentAgent.status === 'Published') {
-      state.currentAgent.status = 'Unsaved changes';
-    } else if (!isDirty && state.savedSnapshot.status === 'Published') {
-      state.currentAgent.status = 'Published';
+    if (isDirty) {
+      if (state.lastPublishedSnapshot) {
+        state.currentAgent.status = 'Unsaved changes';
+      }
+    } else {
+      if (state.lastPublishedSnapshot) {
+        state.currentAgent.status = 'Published';
+      } else {
+        state.currentAgent.status = 'Draft';
+      }
     }
   }
 
@@ -204,11 +218,17 @@
       if (isNaN(limit) || limit < 1) {
         errors.push('Tool Call Limit must be an integer greater than or equal to 1.');
       }
-      if (agent.sharedModel.historyManagement?.enabled) {
-        const trig = Number(agent.sharedModel.historyManagement.triggerTokens);
-        const targ = Number(agent.sharedModel.historyManagement.targetTokens);
-        if (!isNaN(trig) && !isNaN(targ) && targ > trig) {
-          errors.push('History Management target tokens cannot exceed trigger tokens.');
+      if (agent.sharedModel.historySummaryEnabled) {
+        const trig = Number(agent.sharedModel.triggerTokens);
+        const targ = Number(agent.sharedModel.targetTokens);
+        if (isNaN(trig) || trig <= 0) {
+          errors.push('Trigger tokens must be a positive integer.');
+        }
+        if (isNaN(targ) || targ <= 0) {
+          errors.push('Target tokens must be a positive integer.');
+        }
+        if (!isNaN(trig) && !isNaN(targ) && targ >= trig) {
+          errors.push('History Management target tokens must be strictly less than trigger tokens.');
         }
       }
     }
@@ -227,36 +247,90 @@
           errors.push('Voice Override Tool Call Limit must be an integer >= 1.');
         }
       }
+      if (agent.voiceModelOverride.historyOverride?.enabled) {
+        const vTrig = Number(agent.voiceModelOverride.historyOverride.triggerTokens);
+        const vTarg = Number(agent.voiceModelOverride.historyOverride.targetTokens);
+        if (isNaN(vTrig) || vTrig <= 0) {
+          errors.push('Voice history trigger tokens must be a positive integer.');
+        }
+        if (isNaN(vTarg) || vTarg <= 0) {
+          errors.push('Voice history target tokens must be a positive integer.');
+        }
+        if (!isNaN(vTrig) && !isNaN(vTarg) && vTarg >= vTrig) {
+          errors.push('Voice history target tokens must be strictly less than trigger tokens.');
+        }
+      }
     }
 
-    // 5. Voice Settings
-    const vs = agent.voiceSettings;
-    if (vs) {
-      // Speech: STT
-      if (!vs.speech?.stt?.provider || !vs.speech.stt.provider.trim()) {
-        errors.push('STT Speech Service is required.');
-      }
-      // Speech: TTS
-      if (!vs.speech?.tts?.provider || !vs.speech.tts.provider.trim()) {
-        errors.push('TTS Provider is required.');
-      }
-      // Inactivity
-      if (vs.inactivity?.enabled && vs.inactivity.retryPromptMode === 'Fixed prompt') {
-        if (!vs.inactivity.inactivityPrompt || !vs.inactivity.inactivityPrompt.trim()) {
-          errors.push('Inactivity retry prompt is required when Fixed prompt mode is selected.');
+    // 5. Voice Settings (only when voice channel enabled)
+    if (agent.channels?.voice) {
+      const vs = agent.voiceSettings;
+      const effectiveStack = (typeof window.getEffectiveSpeechStack === 'function')
+        ? window.getEffectiveSpeechStack(agent)
+        : (agent.voiceModelOverride?.enabled ? agent.voiceModelOverride.speechStack : agent.speechStack) || 'cascaded';
+      const isRealtime = effectiveStack === 'realtime';
+
+      if (vs) {
+        // Speech: STT/TTS only for cascaded stack
+        if (!isRealtime) {
+          if (!vs.speech?.stt?.provider || !vs.speech.stt.provider.trim()) {
+            errors.push('STT Speech Service is required.');
+          }
+          if (!vs.speech?.tts?.provider || !vs.speech.tts.provider.trim()) {
+            errors.push('TTS Provider is required.');
+          }
         }
-      }
-      // Security
-      if (vs.security) {
-        const rate = Number(vs.security.rateLimit);
-        if (isNaN(rate) || rate <= 0) {
-          errors.push('Security rate limit must be a positive number.');
+
+        // DTMF Keypad
+        if (vs.dtmf?.enabled) {
+          const timeout = Number(vs.dtmf.interDigitTimeout);
+          if (isNaN(timeout) || timeout < 0) {
+            errors.push('DTMF inter-digit timeout must be a non-negative integer.');
+          }
+          const maxD = Number(vs.dtmf.maxDigits);
+          if (isNaN(maxD) || maxD < 1) {
+            errors.push('DTMF maximum digits must be an integer >= 1.');
+          }
         }
-        if (Array.isArray(vs.security.allowedDomains)) {
-          for (const d of vs.security.allowedDomains) {
-            if (!d || !d.includes('.')) {
-              errors.push(`Invalid domain format in allowed domains: "${d}". Must contain a valid domain (e.g. example.com).`);
-              break;
+
+        // Inactivity
+        if (vs.inactivity?.enabled) {
+          const wait = Number(vs.inactivity.initialWaitTime);
+          if (isNaN(wait) || wait < 0) {
+            errors.push('Inactivity initial wait time must be a non-negative integer.');
+          }
+          const retry = Number(vs.inactivity.retryInterval);
+          if (isNaN(retry) || retry < 0) {
+            errors.push('Inactivity retry interval must be a non-negative integer.');
+          }
+          const retries = Number(vs.inactivity.inactivityRetries);
+          if (isNaN(retries) || retries < 0) {
+            errors.push('Inactivity retries must be a non-negative integer.');
+          }
+          if (vs.inactivity.retryPromptMode === 'Fixed prompt') {
+            if (!vs.inactivity.inactivityPrompt || !vs.inactivity.inactivityPrompt.trim()) {
+              errors.push('Inactivity retry prompt is required when Fixed prompt mode is selected.');
+            }
+          }
+        }
+
+        // Security
+        if (vs.security) {
+          const rate = Number(vs.security.rateLimit);
+          if (isNaN(rate) || rate < 1) {
+            errors.push('Security rate limit must be a positive integer.');
+          }
+          const ret = Number(vs.security.dataRetentionDays);
+          if (isNaN(ret) || ret < 0) {
+            errors.push('Security data retention must be a non-negative integer.');
+          }
+          if (Array.isArray(vs.security.allowedDomains)) {
+            const domainRegex = /^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$/;
+            for (const d of vs.security.allowedDomains) {
+              if (!d || !domainRegex.test(d)) {
+                errors.push(`Invalid domain format in allowed domains: "${d}". Must contain a valid domain (e.g. app.acme.com).`);
+                break;
+              }
             }
           }
         }
@@ -287,7 +361,9 @@
       if (found) {
         state.currentAgentId = agentId;
         state.currentAgent = clone(found);
+        state.lastSavedSnapshot = clone(found);
         state.savedSnapshot = clone(found);
+        state.lastPublishedSnapshot = found.status === 'Published' ? clone(found) : null;
         state.hasUnsavedChanges = false;
         state.currentView = 'configure';
         state.configTab = 'overview';
@@ -311,8 +387,14 @@
         return false;
       }
       state.currentAgent.updatedAt = new Date().toISOString();
+      state.lastSavedSnapshot = clone(state.currentAgent);
       state.savedSnapshot = clone(state.currentAgent);
       state.hasUnsavedChanges = false;
+      if (state.lastPublishedSnapshot) {
+        state.currentAgent.status = 'Published';
+      } else {
+        state.currentAgent.status = 'Draft';
+      }
 
       // Update in agents list
       const idx = state.agents.findIndex(a => a.id === state.currentAgent.id);
@@ -325,8 +407,8 @@
     },
 
     discardChanges() {
-      if (!state.savedSnapshot) return;
-      state.currentAgent = clone(state.savedSnapshot);
+      if (!state.lastSavedSnapshot) return;
+      state.currentAgent = clone(state.lastSavedSnapshot);
       state.hasUnsavedChanges = false;
       state.discardModalOpen = false;
       addToast('Unsaved changes discarded. Restored previous configuration.', 'info');
@@ -367,6 +449,8 @@
         state.currentAgent.publishedAt = new Date().toISOString();
         state.currentAgent.updatedAt = new Date().toISOString();
 
+        state.lastPublishedSnapshot = clone(state.currentAgent);
+        state.lastSavedSnapshot = clone(state.currentAgent);
         state.savedSnapshot = clone(state.currentAgent);
         state.hasUnsavedChanges = false;
         state.isPublishing = false;
@@ -498,7 +582,27 @@
         state.tryIt.timerInterval = null;
       }
       state.tryIt.voiceState = 'ended';
-      state.tryIt.callEndedBy = `${endedBy} ended the call`;
+      const reason = (endedBy === 'Agent') ? 'Agent ended the call' : 'Caller ended the call';
+      state.tryIt.callEndedBy = reason;
+
+      if (!state.tryIt.callHistory) {
+        state.tryIt.callHistory = [];
+      }
+      state.tryIt.callHistory.unshift({
+        id: 'call_' + Date.now(),
+        sessionId: 'SESS-' + Math.floor(100000 + Math.random() * 900000),
+        agentName: state.currentAgent?.name || 'Voice Agent',
+        endedBy: reason,
+        duration: state.tryIt.callSeconds,
+        turnsCount: state.tryIt.voiceTurns.length,
+        timestamp: new Date().toLocaleTimeString(),
+        turns: clone(state.tryIt.voiceTurns)
+      });
+      notify();
+    },
+
+    toggleCallLogs() {
+      state.tryIt.callLogsOpen = !state.tryIt.callLogsOpen;
       notify();
     },
 
@@ -542,7 +646,26 @@
           tool = 'calendar_scheduler';
         } else {
           reply = `I have logged your request regarding "${promptText}". Querying internal records now... How else can I assist with this request?`;
-          tool = state.currentAgent.assignedTools?.[0] || 'kb_search';
+          tool = null;
+        }
+
+        // Restrict tool strictly to assigned and compatible tools (Phase 7 requirement)
+        const assigned = state.currentAgent?.assignedTools || [];
+        const effectiveStack = (typeof window.getEffectiveSpeechStack === 'function')
+          ? window.getEffectiveSpeechStack(state.currentAgent)
+          : (state.currentAgent?.voiceModelOverride?.enabled ? state.currentAgent.voiceModelOverride.speechStack : state.currentAgent?.speechStack) || 'cascaded';
+        const isRealtime = state.currentAgent?.channels?.voice && effectiveStack === 'realtime';
+        
+        const compatibleTools = assigned.filter(tId => {
+          if (!isRealtime) return true;
+          const toolDef = window.ENTERPRISE_DATA?.TEAM_TOOLS?.find(t => t.id === tId);
+          return !toolDef?.incompatibleRealtime;
+        });
+
+        if (tool && !compatibleTools.includes(tool)) {
+          tool = compatibleTools.length > 0 ? compatibleTools[0] : null;
+        } else if (!tool && compatibleTools.length > 0 && Math.random() > 0.5) {
+          tool = compatibleTools[0];
         }
 
         const agentSec = state.tryIt.callSeconds;

@@ -54,7 +54,7 @@
             <!-- Voice Architecture Badge (Retained throughout configuration per Section 4) -->
             <span className="badge-channel" style="font-size: 11px; background: #EEF2FF; color: var(--color-primary); border: 1px solid #C7D2FE;" title="Active Voice Architecture">
               ${renderIcon('phone', { size: 12, color: 'var(--color-primary)' })}
-              <span>${(agent.voiceModelOverride?.enabled ? agent.voiceModelOverride.speechStack : agent.speechStack) === 'realtime' ? 'Realtime Voice' : 'Cascaded STT/TTS'}</span>
+              <span>${((typeof window.getEffectiveSpeechStack === 'function' ? window.getEffectiveSpeechStack(agent) : (agent.voiceModelOverride?.enabled ? agent.voiceModelOverride.speechStack : agent.speechStack)) === 'realtime') ? 'Realtime Voice' : 'Cascaded STT/TTS'}</span>
             </span>
 
             ${agent.versionId ? html`

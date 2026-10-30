@@ -85,7 +85,7 @@
 
       // Validate name
       if (!name.trim()) {
-        setNameError('Required');
+        setNameError('Agent name is required.');
         hasError = true;
         const el = document.getElementById('input-agent-name');
         if (el) el.focus();
@@ -95,7 +95,7 @@
 
       // Validate voice channel is selected
       if (!voiceOn) {
-        setChannelError('Voice channel must be selected.');
+        setChannelError('Select at least one channel to create an agent.');
         hasError = true;
       } else {
         setChannelError('');
@@ -314,7 +314,7 @@
             ${nameError ? html`
               <div className="invalid-feedback" id="name-error-msg">
                 ${renderIcon('alert-circle', { size: 14 })}
-                <span>Required</span>
+                <span>${nameError}</span>
               </div>
             ` : ''}
           </div>
@@ -411,11 +411,11 @@
           </button>
 
           <button 
-            className="btn btn-primary btn-lg ${isFormInvalid ? 'disabled' : ''}"
+            className="btn btn-primary btn-lg"
             onClick=${handleCreate}
-            disabled=${isSubmitting || isFormInvalid}
+            disabled=${isSubmitting}
             id="btn-submit-create"
-            title="${isFormInvalid ? 'Enter agent name and verify Voice channel is selected' : 'Create agent'}"
+            title="Create agent"
           >
             ${isSubmitting ? html`
               <span className="pulsing-dot" style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #FFFFFF; margin-right: 6px;"></span>

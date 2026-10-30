@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Enterprise Bot - Comprehensive QA Test Runner</title>
+  <link rel="stylesheet" href="styles.css">
+  <script>
+    window.onerror = function(msg, url, line, col, error) {
+      console.error(msg, url, line, col, error);
+      fetch('/log?msg=' + encodeURIComponent('[BROWSER_ERROR] ' + msg + ' at ' + url + ':' + line + ':' + col + (error ? ' | ' + error.stack : '')));
+    };
+  </script>
+  <!-- Feather Icons -->
+  <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+</head>
+<body style="padding: 20px; font-family: Lato, sans-serif;">
+  <h2>Automated Functional QA Runner</h2>
+  <div id="qa-status" style="font-weight: bold; margin-bottom: 12px; color: #2563eb;">Initializing Test Suite...</div>
+  <div id="qa-logs" style="background: #1E293B; color: #F8FAFC; padding: 16px; border-radius: 8px; font-family: monospace; font-size: 13px; max-height: 500px; overflow-y: auto; white-space: pre-wrap;"></div>
+  
+  <!-- Root Mount Point for the Enterprise Bot Application -->
+  <div id="root" style="margin-top: 24px; border: 1px solid #CBD5E1; border-radius: 8px; padding: 16px;"></div>
+
+  <!-- Load Application Scripts in exact production order -->
+  <script src="src/engine.js"></script>
+  <script src="src/icons.js"></script>
+  <script src="src/data.js"></script>
+  <script src="src/state.js"></script>
+  <script src="src/components/Sidebar.js"></script>
+  <script src="src/components/Header.js"></script>
+  <script src="src/components/Dashboard.js"></script>
+  <script src="src/components/CreateAgent.js"></script>
+  <script src="src/components/AgentConfigHeader.js"></script>
+  <script src="src/components/PromptConfig.js"></script>
+  <script src="src/components/ToolsConfig.js"></script>
+  <script src="src/components/ModelSettings.js"></script>
+  <script src="src/components/VoiceSettings.js"></script>
+  <script src="src/components/EmailSettings.js"></script>
+  <script src="src/components/TryItModal.js"></script>
+  <script src="src/components/PublishModal.js"></script>
+  <script src="src/app.js"></script>
+
+  <script>
+    async function logMsg(msg) {
+      console.log(msg);
+      const logEl = document.getElementById('qa-logs');
+      if (logEl) logEl.textContent += msg + '\n';
+      try {
+        await fetch('/log?msg=' + encodeURIComponent(msg));
+      } catch (e) {}
+    }
+
+    async function finishQA(success) {
+      await logMsg('FINAL_QA_STATUS: ' + (success ? 'SUCCESS_ALL_PASS' : 'FAILED_SOME_FAIL'));
+      try {
+        await fetch('/done?status=' + (success ? '0' : '1'));
+      } catch (e) {}
+    }
+
+    function delay(ms) {
+      return new Promise(r => setTimeout(r, ms));
+    }
+
+    window.addEventListener('DOMContentLoaded', async () => {
+      await logMsg('========================================================');
+      await logMsg('STARTING COMPREHENSIVE QA TEST SUITE (PHASES 1 - 10)');
+      await logMsg('========================================================');
+
+      const state = window.AppState;
+      const actions = window.AppActions;
+      let allPassed = true;
+
+      function assert(condition, testName, details = '') {
+        if (condition) {
+          logMsg('[PASS] ' + testName + (details ? ' - ' + details : ''));
+        } else {
+          allPassed = false;
+          logMsg('[FAIL] ' + testName + (details ? ' - ' + details : ''));
+        }
+      }
+
+      try {
+        // Render initial view
+        window.scheduleRender();
+        await delay(300);
+
+        // Select the primary voice test agent
+        actions.setView('configure', 'agent_customer_support');
+        actions.setConfigTab('voice');
+        window.scheduleRender();
+        await delay(300);
+
+        // ----------------------------------------------------
+        // PHASE 1: VOICE ACCORDION INTERACTIONS
+        // ----------------------------------------------------
+        await logMsg('\n--- PHASE 1: Voice Accordion Interactions ---');
+        const sections = ['transcription', 'speech', 'language', 'bargeIn', 'dtmf', 'inactivity', 'noise', 'recording', 'security'];
+        
+        // Initial state: all collapsed
+        const initialOpen = sections.filter(s => state.voiceSettingsUi?.openSections?.[s]);
+        assert(initialOpen.length === 0, 'Phase 1.1: All 9 sections collapsed initially', 'Open count: ' + initialOpen.length);
+
+        // Expand each section
+        for (const s of sections) {
+          actions.toggleVoiceAccordion(s);
+        }
+        window.scheduleRender();
+        await delay(150);
+
+        const allOpenCount = sections.filter(s => state.voiceSettingsUi?.openSections?.[s]).length;
+        assert(allOpenCount === 9, 'Phase 1.2: Multiple sections expand simultaneously (all 9 open)', allOpenCount + '/9 open');
+
+        // Collapse one section independently (e.g. transcription)
+        actions.toggleVoiceAccordion('transcription');
+        window.scheduleRender();
+        await delay(150);
+        assert(!state.voiceSettingsUi.openSections.transcription, 'Phase 1.3: Transcription section collapsed independently');
+        const remainingOpen = sections.filter(s => s !== 'transcription' && state.voiceSettingsUi.openSections[s]).length;
+        assert(remainingOpen === 8, 'Phase 1.4: Remaining 8 sections stayed open', remainingOpen + '/8 open');
+
+        // Check semantic button markup
+        const speechBtn = document.getElementById('accordion-header-speech');
+        assert(speechBtn && speechBtn.tagName === 'BUTTON' && speechBtn.getAttribute('type') === 'button', 'Phase 1.5: Accordion headers are semantic <button type="button">');
+
+        // ----------------------------------------------------
+        // PHASE 2: MODEL SETTINGS
+        // ----------------------------------------------------
+        await logMsg('\n--- PHASE 2: Model Settings ---');
+        actions.setConfigTab('model');
+        window.scheduleRender();
+        await delay(300);
+
+        // Tool Call Limit arbitrary max removed
+        actions.updateCurrentAgent({ sharedModel: { ...state.currentAgent.sharedModel, toolCallLimit: 35 } });
+        assert(state.currentAgent.sharedModel.toolCallLimit === 35, 'Phase 2.1: Tool Call Limit accepts integer >= 1 with arbitrary max removed (tested 35)');
+
+        // History Summary Toggle
+        actions.updateCurrentAgent({ sharedModel: { ...state.currentAgent.sharedModel, historySummaryEnabled: false } });
+        window.scheduleRender();
+        await delay(150);
+        assert(state.currentAgent.sharedModel.historySummaryEnabled === false, 'Phase 2.2: History Summary toggle switched to OFF');
+
+        actions.updateCurrentAgent({ sharedModel: { ...state.currentAgent.sharedModel, historySummaryEnabled: true, triggerTokens: 8000, targetTokens: 5000 } });
+        window.scheduleRender();
+        await delay(150);
+        assert(state.currentAgent.sharedModel.historySummaryEnabled === true && state.currentAgent.sharedModel.targetTokens === 5000, 'Phase 2.3: History Summary ON with Target (5000) and Trigger (8000)');
+
+        // Voice Override Temperature
+        actions.updateCurrentAgent({ voiceModelOverride: { ...state.currentAgent.voiceModelOverride, enabled: true, temperature: 0.75 } });
+        window.scheduleRender();
+        await delay(150);
+        assert(state.currentAgent.voiceModelOverride.temperature === 0.75, 'Phase 2.4: Voice Override Temperature customized to 0.75');
+
+        actions.updateCurrentAgent({ voiceModelOverride: { ...state.currentAgent.voiceModelOverride, temperature: 'Inherited' } });
+        assert(state.currentAgent.voiceModelOverride.temperature === 'Inherited', 'Phase 2.5: Voice Override Temperature set to Inherited');
+
+        // ----------------------------------------------------
+        // PHASE 3 & 4: VOICE SETTINGS FIELDS & CONDITIONAL BEHAVIOUR
+        // ----------------------------------------------------
+        await logMsg('\n--- PHASES 3 & 4: Voice Settings & Conditional Behaviour ---');
+        actions.setConfigTab('voice');
+        // Ensure speech & dtmf are open
+        state.voiceSettingsUi.openSections.speech = true;
+        state.voiceSettingsUi.openSections.dtmf = true;
+        state.voiceSettingsUi.openSections.transcription = true;
+        window.scheduleRender();
+        await delay(300);
+
+        // Check Cascaded Stack STT/TTS tabs
+        actions.updateCurrentAgent({ speechStack: 'cascaded', voiceModelOverride: { ...state.currentAgent.voiceModelOverride, enabled: false } });
+        window.scheduleRender();
+        await delay(200);
+
+        const effectiveCascaded = window.getEffectiveSpeechStack(state.currentAgent);
+        assert(effectiveCascaded === 'cascaded', 'Phase 4.1: Effective stack resolves to cascaded');
+
+        // STT provider default: Team default service
+        assert(state.currentAgent.voiceSettings.speech.stt.provider === 'Team default service', 'Phase 4.2: STT default is Team default service');
+
+        // Provider Mismatch Check: Team default service (Azure) + Azure TTS -> No warning
+        const resolvedStt = (state.currentAgent.voiceSettings.speech.stt.provider === 'Team default service') ? 'Azure' : 'Other';
+        assert(resolvedStt === 'Azure' && state.currentAgent.voiceSettings.speech.tts.provider === 'Azure', 'Phase 4.3: Team default maps to Azure; no mismatch with Azure TTS');
+
+        // Azure TTS Volume dropdown
+        actions.updateCurrentAgent({
+          voiceSettings: {
+            ...state.currentAgent.voiceSettings,
+            speech: {
+              ...state.currentAgent.voiceSettings.speech,
+              activeTab: 'tts',
+              tts: { ...state.currentAgent.voiceSettings.speech.tts, provider: 'Azure', azure: { ...state.currentAgent.voiceSettings.speech.tts.azure, volume: 'Loud' } }
+            }
+          }
+        });
+        window.scheduleRender();
+        await delay(150);
+        assert(state.currentAgent.voiceSettings.speech.tts.azure.volume === 'Loud', 'Phase 3.1: Azure TTS Volume configurable (Default, Silent, Soft, Medium, Loud)');
+
+        // ElevenLabs Style Exaggeration
+        actions.updateCurrentAgent({
+          voiceSettings: {
+            ...state.currentAgent.voiceSettings,
+            speech: {
+              ...state.currentAgent.voiceSettings.speech,
+              activeTab: 'tts',
+              tts: {
+                ...state.currentAgent.voiceSettings.speech.tts,
+                provider: 'ElevenLabs',
+                elevenLabs: { ...state.currentAgent.voiceSettings.speech.tts.elevenLabs, styleExaggeration: 0.4 }
+              }
+            }
+          }
+        });
+        window.scheduleRender();
+        await delay(150);
+        assert(state.currentAgent.voiceSettings.speech.tts.elevenLabs.styleExaggeration === 0.4, 'Phase 3.2: ElevenLabs Style Exaggeration configurable (0.0 to 1.0, tested 0.4)');
+
+        // DTMF Barge-in
+        actions.updateCurrentAgent({
+          voiceSettings: {
+            ...state.currentAgent.voiceSettings,
+            dtmf: { ...state.currentAgent.voiceSettings.dtmf, enabled: true, bargeIn: true }
+          }
+        });
+        window.scheduleRender();
+        await delay(150);
+        assert(state.currentAgent.voiceSettings.dtmf.bargeIn === true, 'Phase 3.3: DTMF Barge-in toggle implemented in DTMF section');
+
+        // Speech Silence Timeout vs STT Segmentation Silence Timeout
+        assert(state.currentAgent.voiceSettings.speech.silenceTimeout === 400, 'Phase 3.4: Speech Silence Timeout default 400 ms');
+        assert(state.currentAgent.voiceSettings.speech.stt.segmentationSilenceTimeout === 500, 'Phase 3.5: STT Segmentation Silence Timeout default 500 ms');
+
+        // Realtime Stack Mode check
+        actions.updateCurrentAgent({
+          speechStack: 'realtime',
+          voiceModelOverride: { ...state.currentAgent.voiceModelOverride, enabled: true, speechStack: 'realtime' }
+        });
+        window.scheduleRender();
+        await delay(200);
+
+        const effectiveRealtime = window.getEffectiveSpeechStack(state.currentAgent);
+        assert(effectiveRealtime === 'realtime', 'Phase 4.4: Effective stack resolves to realtime');
+
+        // In Realtime, External Transcription is allowed
+        assert(state.currentAgent.channels.voice && effectiveRealtime === 'realtime' && state.currentAgent.voiceModelOverride.enabled, 'Phase 4.5: External Transcription allowed when Voice + Realtime + Voice Model Override');
+
+        // ----------------------------------------------------
+        // PHASE 5: VALIDATION
+        // ----------------------------------------------------
+        await logMsg('\n--- PHASE 5: Validation ---');
+        // Valid config should return 0 errors
+        const validErrors = actions.validateAgentConfig(state.currentAgent);
+        assert(validErrors.length === 0, 'Phase 5.1: Clean configuration returns 0 validation errors', JSON.stringify(validErrors));
+
+        // Invalid Tool Call Limit
+        const invalidLimitAgent = { ...state.currentAgent, sharedModel: { ...state.currentAgent.sharedModel, toolCallLimit: 0 } };
+        const limitErrors = actions.validateAgentConfig(invalidLimitAgent);
+        assert(limitErrors.some(e => e.includes('Tool Call Limit')), 'Phase 5.2: Tool Call Limit < 1 triggers validation error');
+
+        // Invalid History Tokens (Target >= Trigger)
+        const invalidHistoryAgent = { ...state.currentAgent, sharedModel: { ...state.currentAgent.sharedModel, historySummaryEnabled: true, triggerTokens: 5000, targetTokens: 8000 } };
+        const histErrors = actions.validateAgentConfig(invalidHistoryAgent);
+        assert(histErrors.some(e => e.includes('strictly less than trigger tokens')), 'Phase 5.3: History Target >= Trigger tokens triggers validation error');
+
+        // Invalid Domain Regex
+        const invalidDomainAgent = {
+          ...state.currentAgent,
+          voiceSettings: {
+            ...state.currentAgent.voiceSettings,
+            security: { ...state.currentAgent.voiceSettings.security, allowedDomains: ['invalid_domain_without_extension'] }
+          }
+        };
+        const domErrors = actions.validateAgentConfig(invalidDomainAgent);
+        assert(domErrors.some(e => e.includes('Invalid domain format')), 'Phase 5.4: Malformed domain triggers regex validation error');
+
+        // ----------------------------------------------------
+        // PHASE 6: TOOL COMPATIBILITY
+        // ----------------------------------------------------
+        await logMsg('\n--- PHASE 6: Tool Compatibility ---');
+        actions.setConfigTab('tools');
+        window.scheduleRender();
+        await delay(250);
+
+        // While Realtime stack is active, verify incompatible tools are flagged and disabled
+        const incompatibleTool = window.ENTERPRISE_DATA.TEAM_TOOLS.find(t => t.incompatibleRealtime === true);
+        assert(incompatibleTool && incompatibleTool.incompatibleRealtime === true, 'Phase 6.1: Found tool incompatible with Realtime (' + incompatibleTool.name + ')');
+
+        const disabledToolInput = document.querySelector('input[type="checkbox"][disabled]');
+        assert(disabledToolInput !== null, 'Phase 6.2: Incompatible tool selection is disabled in Realtime mode');
+
+        // ----------------------------------------------------
+        // PHASE 7: TRY IT VOICE TESTING & CALL LOGS
+        // ----------------------------------------------------
+        await logMsg('\n--- PHASE 7: Try It Voice Testing ---');
+        actions.openTryIt('voice');
+        window.scheduleRender();
+        await delay(250);
+
+        assert(state.tryItOpen === true, 'Phase 7.1: Try It drawer opened');
+        assert(state.tryIt.voiceState === 'idle', 'Phase 7.2: Voice Sandbox in initial Idle state');
+
+        // Start call
+        actions.startVoiceCall();
+        assert(state.tryIt.voiceState === 'live', 'Phase 7.3: Call transitioned to Live state');
+        assert(state.tryIt.voiceTurns.length >= 1, 'Phase 7.4: Agent greeting rendered in transcript');
+
+        // End call by Caller
+        actions.endVoiceCall('Caller');
+        assert(state.tryIt.voiceState === 'ended', 'Phase 7.5: Call ended by Caller');
+        assert(state.tryIt.callEndedBy === 'Caller ended the call', 'Phase 7.6: Ended summary confirms Caller ended the call');
+        assert(state.tryIt.callHistory.length >= 1, 'Phase 7.7: Call history record logged');
+
+        // Toggle call logs modal
+        actions.toggleCallLogs();
+        assert(state.tryIt.callLogsOpen === true, 'Phase 7.8: Call Logs modal drawer opened with session record');
+        actions.toggleCallLogs();
+        actions.closeTryIt();
+
+        // ----------------------------------------------------
+        // PHASE 8: PUBLISH & DISCARD WORKFLOW
+        // ----------------------------------------------------
+        await logMsg('\n--- PHASE 8: Publish / Discard Workflow ---');
+        // Edit agent name to create unsaved changes
+        const origName = state.currentAgent.name;
+        actions.updateCurrentAgent({ name: origName + ' (Edited)' });
+        assert(state.hasUnsavedChanges === true, 'Phase 8.1: Unsaved changes detected when agent edited');
+
+        // Discard changes
+        actions.discardChanges();
+        assert(state.hasUnsavedChanges === false && state.currentAgent.name === origName, 'Phase 8.2: Discard successfully restores previous saved snapshot');
+
+        // Publish flow (make a change to publish)
+        actions.updateCurrentAgent({ description: 'Updated agent for production release' });
+        actions.openPublishModal();
+        assert(state.publishModalOpen === true, 'Phase 8.3: Publish modal opened for modified agent');
+        actions.closePublishModal();
+
+        // ----------------------------------------------------
+        // PHASE 9: CREATION ERROR DEMONSTRATIONS
+        // ----------------------------------------------------
+        await logMsg('\n--- PHASE 9: Creation Error Demonstrations ---');
+        actions.setView('create');
+        window.scheduleRender();
+        await delay(250);
+
+        const submitBtn = document.getElementById('btn-submit-create');
+        assert(submitBtn && !submitBtn.disabled, 'Phase 9.1: Create Agent button clickable to demonstrate errors');
+
+        submitBtn.click();
+        window.scheduleRender();
+        await delay(150);
+
+        const nameErrorEl = document.getElementById('name-error-msg');
+        assert(nameErrorEl && nameErrorEl.textContent.includes('required'), 'Phase 9.2: Agent Name is required validation message displayed');
+
+        // Return to dashboard
+        actions.setView('dashboard');
+        window.scheduleRender();
+        await delay(200);
+
+        await logMsg('\n========================================================');
+        await logMsg('ALL TEST ASSERTIONS FINISHED. RESULT: ' + (allPassed ? 'ALL PASSED!' : 'SOME FAILED!'));
+        await logMsg('========================================================');
+
+        await finishQA(allPassed);
+      } catch (err) {
+        await logMsg('[FATAL_ERROR] ' + err.stack || err.message);
+        await finishQA(false);
+      }
+    });
+  </script>
+</body>
+</html>

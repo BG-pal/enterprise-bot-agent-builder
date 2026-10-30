@@ -14,10 +14,18 @@
     const [toolSearch, setToolSearch] = React.useState('');
     const [tagInput, setTagInput] = React.useState('');
 
-    const isRealtime = agent.channels.voice && agent.speechStack === 'realtime';
+    const effectiveStack = (typeof window.getEffectiveSpeechStack === 'function')
+      ? window.getEffectiveSpeechStack(agent)
+      : (agent.voiceModelOverride?.enabled ? agent.voiceModelOverride.speechStack : agent.speechStack) || 'cascaded';
+    const isRealtime = !!agent.channels.voice && effectiveStack === 'realtime';
 
-    // Tool assignment toggle
+    // Tool assignment toggle with Realtime compatibility check
     function toggleTool(toolId) {
+      const toolObj = TEAM_TOOLS.find(t => t.id === toolId);
+      if (isRealtime && toolObj?.incompatibleRealtime) {
+        actions.addToast(`"${toolObj.name}" is incompatible with Realtime Voice mode.`, 'warning');
+        return;
+      }
       let nextTools = [...agent.assignedTools];
       if (nextTools.includes(toolId)) {
         nextTools = nextTools.filter(id => id !== toolId);
@@ -161,15 +169,16 @@
                   key=${tool.id}
                   className="selection-card ${isAssigned ? 'selected' : ''}"
                   onClick=${() => toggleTool(tool.id)}
-                  style="cursor: pointer; padding: 14px 18px;"
+                  style="cursor: ${hasCompatibilityIssue ? 'not-allowed' : 'pointer'}; opacity: ${hasCompatibilityIssue ? 0.75 : 1}; padding: 14px 18px;"
                 >
                   <div style="display: flex; align-items: flex-start; gap: 14px; flex: 1;">
                     <div style="margin-top: 2px;">
                       <input 
                         type="checkbox" 
+                        disabled=${hasCompatibilityIssue}
                         checked=${isAssigned}
                         onChange=${(e) => { e.stopPropagation(); toggleTool(tool.id); }}
-                        style="width: 18px; height: 18px; cursor: pointer; accent-color: var(--color-primary);"
+                        style="width: 18px; height: 18px; cursor: ${hasCompatibilityIssue ? 'not-allowed' : 'pointer'}; accent-color: var(--color-primary);"
                       />
                     </div>
                     <div style="flex: 1;">
