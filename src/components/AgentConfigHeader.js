@@ -58,9 +58,20 @@
             </span>
 
             ${agent.versionId ? html`
-              <span style="font-size: 12px; color: var(--text-muted); font-family: monospace; background: #F3F4F6; padding: 2px 6px; border-radius: var(--radius-sm);" title="Published Version ID">
-                ${agent.versionId}
-              </span>
+              <button 
+                type="button"
+                onClick=${() => {
+                  if (navigator.clipboard) {
+                    navigator.clipboard.writeText(agent.versionId);
+                  }
+                  actions.addToast('Version ID copied to clipboard: ' + agent.versionId, 'success');
+                }}
+                style="display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--text-muted); font-family: monospace; background: #F3F4F6; padding: 2px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); cursor: pointer;" 
+                title="Click to copy Version ID"
+              >
+                ${renderIcon('copy', { size: 12, color: 'var(--text-muted)' })}
+                <span>${agent.versionId}</span>
+              </button>
             ` : ''}
           </div>
         </div>
