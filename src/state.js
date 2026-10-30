@@ -58,6 +58,23 @@
     // Testing modal & workspace
     tryItOpen: false,
     tryItChannel: 'voice', // 'voice' | 'email'
+    tryIt: {
+      channel: 'voice', // 'voice' | 'email'
+      voiceState: 'idle', // 'idle' | 'live' | 'ended'
+      callSeconds: 0,
+      timerInterval: null,
+      isMuted: false,
+      showTranscript: true,
+      callEndedBy: '',
+      voiceTurns: [],
+      customCallerInput: '',
+      emailFrom: 'pallavi.user@enterprise.com',
+      emailSubject: '',
+      emailBody: '',
+      isReplying: false,
+      emailThread: [],
+      expandedDetails: {}
+    },
     
     // Publish modal
     publishModalOpen: false,
@@ -273,12 +290,14 @@
 
     openTryIt(channel = null) {
       if (!state.currentAgent) return;
-      // Default to voice if enabled, otherwise email
       if (channel) {
+        state.tryIt.channel = channel;
         state.tryItChannel = channel;
       } else if (state.currentAgent.channels.voice) {
+        state.tryIt.channel = 'voice';
         state.tryItChannel = 'voice';
       } else {
+        state.tryIt.channel = 'email';
         state.tryItChannel = 'email';
       }
       state.tryItOpen = true;
@@ -286,7 +305,223 @@
     },
 
     closeTryIt() {
+      if (state.tryIt.timerInterval) {
+        clearInterval(state.tryIt.timerInterval);
+        state.tryIt.timerInterval = null;
+      }
       state.tryItOpen = false;
+      notify();
+    },
+
+    setTryItChannel(channel) {
+      if (!state.currentAgent) return;
+      if (channel === 'voice' && !state.currentAgent.channels.voice) return;
+      if (channel === 'email' && !state.currentAgent.channels.email) return;
+      if (channel === 'chat') return; // Chat is Coming Soon
+      state.tryIt.channel = channel;
+      state.tryItChannel = channel;
+      notify();
+    },
+
+    startVoiceCall() {
+      if (!state.currentAgent) return;
+      if (state.tryIt.timerInterval) {
+        clearInterval(state.tryIt.timerInterval);
+        state.tryIt.timerInterval = null;
+      }
+      state.tryIt.voiceState = 'live';
+      state.tryIt.callSeconds = 0;
+      state.tryIt.isMuted = false;
+      state.tryIt.showTranscript = true;
+      state.tryIt.callEndedBy = '';
+      const greeting = state.currentAgent.welcomeMessage?.trim() || 'Hello! Thank you for calling Acme Enterprise Support. How can I assist you today?';
+      state.tryIt.voiceTurns = [
+        {
+          speaker: 'agent',
+          text: greeting,
+          tool: null,
+          timestamp: '00:01'
+        }
+      ];
+      state.tryIt.timerInterval = setInterval(() => {
+        if (state.tryIt.voiceState === 'live') {
+          state.tryIt.callSeconds++;
+          notify();
+        }
+      }, 1000);
+      notify();
+    },
+
+    endVoiceCall(endedBy = 'Caller') {
+      if (state.tryIt.timerInterval) {
+        clearInterval(state.tryIt.timerInterval);
+        state.tryIt.timerInterval = null;
+      }
+      state.tryIt.voiceState = 'ended';
+      state.tryIt.callEndedBy = `${endedBy} ended the call`;
+      notify();
+    },
+
+    toggleVoiceMute() {
+      state.tryIt.isMuted = !state.tryIt.isMuted;
+      notify();
+    },
+
+    toggleVoiceTranscript() {
+      state.tryIt.showTranscript = !state.tryIt.showTranscript;
+      notify();
+    },
+
+    sendVoiceCallerTurn(promptText) {
+      if (!promptText || state.tryIt.voiceState !== 'live') return;
+      const m = Math.floor(state.tryIt.callSeconds / 60);
+      const s = state.tryIt.callSeconds % 60;
+      const timestamp = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+      state.tryIt.voiceTurns.push({
+        speaker: 'caller',
+        text: promptText.trim(),
+        timestamp: timestamp
+      });
+      state.tryIt.customCallerInput = '';
+      notify();
+
+      setTimeout(() => {
+        if (state.tryIt.voiceState !== 'live') return;
+        const lower = promptText.toLowerCase();
+        let reply = '';
+        let tool = null;
+
+        if (lower.includes('claim') || lower.includes('status')) {
+          reply = 'Certainly! I would be glad to look up your claim status. Could you please share your claim reference number?';
+          tool = 'kb_search';
+        } else if (lower.includes('clm') || lower.includes('98234') || lower.includes('reference')) {
+          reply = 'Thank you! I located claim #CLM-98234 for property damage repair. The claim was approved by the claims adjuster on Oct 24th, and a reimbursement payment of $1,420.00 will be credited to your account within 2 business days.';
+          tool = 'crm_lookup_policy';
+        } else if (lower.includes('transfer') || lower.includes('human') || lower.includes('representative') || lower.includes('agent') || lower.includes('person')) {
+          reply = 'I understand. I am transferring your call directly to our Senior Claims Specialist queue now. Please hold for just a moment.';
+          tool = 'calendar_scheduler';
+        } else {
+          reply = `I have logged your request regarding "${promptText}". Querying internal records now... How else can I assist with this request?`;
+          tool = state.currentAgent.assignedTools?.[0] || 'kb_search';
+        }
+
+        const agentSec = state.tryIt.callSeconds;
+        const am = Math.floor(agentSec / 60);
+        const as = agentSec % 60;
+        state.tryIt.voiceTurns.push({
+          speaker: 'agent',
+          text: reply,
+          tool: tool,
+          timestamp: `${String(am).padStart(2, '0')}:${String(as).padStart(2, '0')}`
+        });
+        notify();
+      }, 750);
+    },
+
+    setTryItCallerInput(val) {
+      state.tryIt.customCallerInput = val;
+      notify();
+    },
+
+    setTryItEmailSubject(val) {
+      state.tryIt.emailSubject = val;
+      notify();
+    },
+
+    setTryItEmailBody(val) {
+      state.tryIt.emailBody = val;
+      notify();
+    },
+
+    sendTryItEmail() {
+      const subject = state.tryIt.emailSubject?.trim();
+      const body = state.tryIt.emailBody?.trim();
+      if (!subject || !body) return;
+
+      const agent = state.currentAgent;
+      const recipientMailbox = agent?.emailSettings?.inbox?.mailboxes?.[0]?.address || 'support@acme.enterprisebot.ai';
+
+      const userMsgId = 'msg_' + Date.now();
+      const sentMsg = {
+        id: userMsgId,
+        sender: state.tryIt.emailFrom,
+        recipient: recipientMailbox,
+        subject: subject,
+        body: body,
+        timestamp: 'Just now',
+        isExpanded: false,
+        type: 'user'
+      };
+
+      // Collapse older messages so the latest will be clear
+      state.tryIt.emailThread.forEach(m => m.isExpanded = false);
+      sentMsg.isExpanded = true;
+      state.tryIt.emailThread.push(sentMsg);
+      state.tryIt.isReplying = true;
+      state.tryIt.emailSubject = '';
+      state.tryIt.emailBody = '';
+      notify();
+
+      setTimeout(() => {
+        state.tryIt.isReplying = false;
+        const threading = agent?.emailSettings?.threading || {};
+        let sig = '';
+        if (threading.appendSignature) {
+          if (threading.signatureType === 'Agent signature' && threading.agentSignatureText) {
+            sig = '\n\n' + threading.agentSignatureText;
+          } else {
+            sig = '\n\nBest regards,\nCustomer Support Team\nAcme Enterprise';
+          }
+        }
+
+        const replyBody = `Hello,\n\nThank you for contacting us regarding "${subject}".\n\nOur system has reviewed your request. Your claim reference CLM-98234 is currently in final review with all required documentation attached. A confirmation has been logged to your account.\n\nPlease let us know if you need any additional assistance.${sig}`;
+
+        // Collapse previous messages, newest message expanded by default
+        state.tryIt.emailThread.forEach(m => m.isExpanded = false);
+
+        const agentMsgId = 'msg_' + (Date.now() + 1);
+        const agentMsg = {
+          id: agentMsgId,
+          sender: threading.personAddress || 'support.rep@acme.enterprisebot.ai',
+          recipient: state.tryIt.emailFrom,
+          subject: subject.startsWith('Re:') ? subject : `Re: ${subject}`,
+          body: replyBody,
+          timestamp: 'Just now',
+          isExpanded: true, // newest message expanded by default
+          type: 'agent',
+          toolsUsed: ['crm_lookup_policy', 'kb_search'],
+          extractedEntities: [
+            { name: 'claim_id', value: 'CLM-98234', confidence: '98%' },
+            { name: 'customer_name', value: 'Pallavi BG', confidence: '95%' },
+            { name: 'intent', value: 'claim_status_inquiry', confidence: '99%' }
+          ]
+        };
+
+        state.tryIt.emailThread.push(agentMsg);
+        notify();
+      }, 1100);
+    },
+
+    toggleTryItEmailMessage(id) {
+      const msg = state.tryIt.emailThread.find(m => m.id === id);
+      if (msg) {
+        msg.isExpanded = !msg.isExpanded;
+        notify();
+      }
+    },
+
+    toggleTryItEmailDetails(id) {
+      state.tryIt.expandedDetails[id] = !state.tryIt.expandedDetails[id];
+      notify();
+    },
+
+    newTestEmail() {
+      state.tryIt.emailThread = [];
+      state.tryIt.emailSubject = '';
+      state.tryIt.emailBody = '';
+      state.tryIt.isReplying = false;
+      state.tryIt.expandedDetails = {};
+      addToast('Started a fresh email testing thread.', 'info');
       notify();
     },
 

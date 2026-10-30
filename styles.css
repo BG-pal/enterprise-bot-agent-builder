@@ -892,6 +892,15 @@ input:disabled + .toggle-slider {
 }
 
 /* Drawer / Testing Workspace (Try It) */
+.drawer-backdrop {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: rgba(15, 23, 42, 0.35);
+  backdrop-filter: blur(2px);
+  z-index: 90;
+  animation: fadeIn 0.15s ease-out;
+}
+
 .drawer-workspace {
   position: fixed;
   top: 0; right: 0; bottom: 0;
