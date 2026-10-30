@@ -93,9 +93,9 @@
         setNameError('');
       }
 
-      // Validate channels
-      if (!voiceOn && !emailOn) {
-        setChannelError('Select at least one channel to create an agent.');
+      // Validate voice channel is selected
+      if (!voiceOn) {
+        setChannelError('Voice channel must be selected.');
         hasError = true;
       } else {
         setChannelError('');
@@ -105,11 +105,11 @@
 
       setIsSubmitting(true);
 
-      // Create new agent with values
+      // Create new agent with Voice as active channel
       actions.createNewAgent({
         name: name.trim(),
-        channels: { voice: voiceOn, email: emailOn, chat: false },
-        speechStack: voiceOn ? speechStack : 'cascaded',
+        channels: { voice: true, email: false, chat: false },
+        speechStack: speechStack || 'cascaded',
         language,
         description,
         welcomeMessage,
@@ -117,8 +117,8 @@
       });
     }
 
-    // Validation status check
-    const isFormInvalid = !name.trim() || (!voiceOn && !emailOn);
+    // Validation status check: Name required and Voice must be selected
+    const isFormInvalid = !name.trim() || !voiceOn;
 
     return html`
       <div className="content-container" style="max-width: 860px;">
@@ -201,10 +201,10 @@
                     <div>
                       <div style="font-weight: 700; font-size: 14px; color: var(--text-primary); display: flex; align-items: center; gap: 6px;">
                         <span>Cascaded</span>
-                        <span className="badge badge-published" style="font-size: 10px;">Recommended</span>
+                        <span className="badge badge-published" style="font-size: 10px;">Default</span>
                       </div>
                       <div className="text-secondary" style="font-size: 12px; margin-top: 4px; line-height: 1.4;">
-                        Uses separate speech-to-text and text-to-speech stages around a text model. Flexible and supports all tools.
+                        Separate speech-to-text and text-to-speech around a text model; flexible and supports tools.
                       </div>
                     </div>
                   </div>
@@ -221,7 +221,7 @@
                         <span className="badge badge-alpha" style="font-size: 10px;">Ultra Low Latency</span>
                       </div>
                       <div className="text-secondary" style="font-size: 12px; margin-top: 4px; line-height: 1.4;">
-                        Uses one speech-to-speech model for lowest latency. Guardrails and PII protections are not yet enforced.
+                        One speech-to-speech model; lowest latency; guardrails/PII not yet enforced.
                       </div>
                     </div>
                   </div>
@@ -229,48 +229,38 @@
               </div>
             ` : ''}
 
-            <!-- EMAIL CHANNEL CARD -->
+            <!-- EMAIL CHANNEL CARD (Preserved visually, marked Phase 2 per scope) -->
             <div 
-              className="selection-card ${emailOn ? 'selected' : ''}"
-              onClick=${() => {
-                const next = !emailOn;
-                setEmailOn(next);
-                if (next) setChannelError('');
-              }}
-              style="cursor: pointer;"
+              className="selection-card disabled"
+              style="cursor: not-allowed; opacity: 0.65;"
               id="card-channel-email"
+              title="Email channel configuration is out of scope for this Voice prototype"
             >
               <div style="display: flex; align-items: center; gap: 16px;">
-                <div style="width: 44px; height: 44px; border-radius: var(--radius-md); background: ${emailOn ? 'var(--color-primary-light)' : '#F3F4F6'}; display: flex; align-items: center; justify-content: center; color: ${emailOn ? 'var(--color-primary)' : 'var(--text-muted)'}; flex-shrink: 0;">
+                <div style="width: 44px; height: 44px; border-radius: var(--radius-md); background: #F3F4F6; display: flex; align-items: center; justify-content: center; color: var(--text-muted); flex-shrink: 0;">
                   ${renderIcon('mail', { size: 22 })}
                 </div>
                 <div>
-                  <div style="font-weight: 700; font-size: 15px; color: var(--text-primary);">
-                    Email
+                  <div style="font-weight: 700; font-size: 15px; color: var(--text-secondary); display: flex; align-items: center; gap: 8px;">
+                    <span>Email</span>
+                    <span className="badge badge-draft" style="font-size: 11px;">Phase 2</span>
                   </div>
                   <div className="text-secondary" style="font-size: 13px; margin-top: 2px;">
-                    Replies from a mailbox. <span style="color: var(--text-muted); font-size: 12px;">(Mailbox is connected after agent creation)</span>
+                    Replies from a mailbox. <span style="color: var(--text-muted); font-size: 12px;">(Out of scope for Voice-focused prototype)</span>
                   </div>
                 </div>
               </div>
 
-              <label className="toggle-switch" onClick=${(e) => e.stopPropagation()}>
-                <input 
-                  type="checkbox" 
-                  checked=${emailOn}
-                  onChange=${(e) => {
-                    setEmailOn(e.target.checked);
-                    if (e.target.checked) setChannelError('');
-                  }}
-                />
+              <label className="toggle-switch" style="pointer-events: none; opacity: 0.5;">
+                <input type="checkbox" disabled checked=${false} tabIndex="-1" />
                 <span className="toggle-slider"></span>
               </label>
             </div>
 
-            <!-- CHAT CHANNEL CARD (Coming Soon, Disabled) -->
+            <!-- CHAT CHANNEL CARD (Coming Soon, Disabled, Not Focusable) -->
             <div 
               className="selection-card disabled"
-              style="cursor: not-allowed; opacity: 0.6;"
+              style="cursor: not-allowed; opacity: 0.5;"
               tabIndex="-1"
               aria-disabled="true"
               id="card-channel-chat"
@@ -282,7 +272,7 @@
                 <div>
                   <div style="font-weight: 700; font-size: 15px; color: var(--text-muted); display: flex; align-items: center; gap: 8px;">
                     <span>Chat</span>
-                    <span className="badge badge-coming-soon">Coming Soon</span>
+                    <span className="badge badge-coming-soon">Soon</span>
                   </div>
                   <div className="text-muted" style="font-size: 13px; margin-top: 2px;">
                     Answers web and WhatsApp messages.
@@ -290,7 +280,7 @@
                 </div>
               </div>
 
-              <label className="toggle-switch" style="pointer-events: none; opacity: 0.5;">
+              <label className="toggle-switch" style="pointer-events: none; opacity: 0.4;">
                 <input type="checkbox" disabled checked=${false} tabIndex="-1" />
                 <span className="toggle-slider"></span>
               </label>
@@ -404,11 +394,7 @@
           </div>
           <div style="font-size: 13px; color: var(--text-secondary); line-height: 1.5;">
             <strong style="color: var(--text-primary); display: block; margin-bottom: 2px;">Next steps after creation:</strong>
-            ${!emailOn ? html`
-              <span>Your voice agent will land in <strong>Behaviour › Prompts</strong> to tune instructions, speech rules, and guardrails.</span>
-            ` : html`
-              <span>Your email-enabled agent will land in <strong>Email › Inbox</strong> to connect and verify your team mailbox.</span>
-            `}
+            <span>Your Voice agent will land in <strong>Behaviour › Prompts</strong> to tune instructions, speech response rules, and call transfer guidelines.</span>
           </div>
         </div>
 
@@ -427,9 +413,9 @@
           <button 
             className="btn btn-primary btn-lg ${isFormInvalid ? 'disabled' : ''}"
             onClick=${handleCreate}
-            disabled=${isSubmitting}
+            disabled=${isSubmitting || isFormInvalid}
             id="btn-submit-create"
-            title="${isFormInvalid ? 'Enter a name and select at least one channel' : 'Create agent'}"
+            title="${isFormInvalid ? 'Enter agent name and verify Voice channel is selected' : 'Create agent'}"
           >
             ${isSubmitting ? html`
               <span className="pulsing-dot" style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #FFFFFF; margin-right: 6px;"></span>

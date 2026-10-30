@@ -158,7 +158,98 @@
     }
   }
 
+  function validateAgentConfig(agent) {
+    if (!agent) return ['No agent selected.'];
+    const errors = [];
+
+    // 1. General & Channels
+    if (!agent.name || !agent.name.trim()) {
+      errors.push('Agent Name is required.');
+    }
+    if (agent.channels?.voice && !agent.speechStack) {
+      errors.push('Voice architecture (Speech Stack) is required.');
+    }
+
+    // 2. Tools
+    if (agent.toolCallCustomMessages && (!agent.toolDefaultMessage || !agent.toolDefaultMessage.trim())) {
+      errors.push('Default Tool Message is required when Tool Call Custom Messages are enabled.');
+    }
+
+    // 3. Shared Model Settings
+    if (agent.sharedModel) {
+      const temp = Number(agent.sharedModel.temperature);
+      if (isNaN(temp) || temp < 0 || temp > 1) {
+        errors.push('Shared Model Temperature must be between 0.0 and 1.0.');
+      }
+      const limit = Number(agent.sharedModel.toolCallLimit);
+      if (isNaN(limit) || limit < 1) {
+        errors.push('Tool Call Limit must be an integer greater than or equal to 1.');
+      }
+      if (agent.sharedModel.historyManagement?.enabled) {
+        const trig = Number(agent.sharedModel.historyManagement.triggerTokens);
+        const targ = Number(agent.sharedModel.historyManagement.targetTokens);
+        if (!isNaN(trig) && !isNaN(targ) && targ > trig) {
+          errors.push('History Management target tokens cannot exceed trigger tokens.');
+        }
+      }
+    }
+
+    // 4. Voice Model Override
+    if (agent.voiceModelOverride?.enabled) {
+      if (agent.voiceModelOverride.temperature !== 'Inherited') {
+        const temp = Number(agent.voiceModelOverride.temperature);
+        if (isNaN(temp) || temp < 0 || temp > 1) {
+          errors.push('Voice Override Temperature must be between 0.0 and 1.0.');
+        }
+      }
+      if (agent.voiceModelOverride.toolCallLimit !== 'Inherited') {
+        const limit = Number(agent.voiceModelOverride.toolCallLimit);
+        if (isNaN(limit) || limit < 1) {
+          errors.push('Voice Override Tool Call Limit must be an integer >= 1.');
+        }
+      }
+    }
+
+    // 5. Voice Settings
+    const vs = agent.voiceSettings;
+    if (vs) {
+      // Speech: STT
+      if (!vs.speech?.stt?.provider || !vs.speech.stt.provider.trim()) {
+        errors.push('STT Speech Service is required.');
+      }
+      // Speech: TTS
+      if (!vs.speech?.tts?.provider || !vs.speech.tts.provider.trim()) {
+        errors.push('TTS Provider is required.');
+      }
+      // Inactivity
+      if (vs.inactivity?.enabled && vs.inactivity.retryPromptMode === 'Fixed prompt') {
+        if (!vs.inactivity.inactivityPrompt || !vs.inactivity.inactivityPrompt.trim()) {
+          errors.push('Inactivity retry prompt is required when Fixed prompt mode is selected.');
+        }
+      }
+      // Security
+      if (vs.security) {
+        const rate = Number(vs.security.rateLimit);
+        if (isNaN(rate) || rate <= 0) {
+          errors.push('Security rate limit must be a positive number.');
+        }
+        if (Array.isArray(vs.security.allowedDomains)) {
+          for (const d of vs.security.allowedDomains) {
+            if (!d || !d.includes('.')) {
+              errors.push(`Invalid domain format in allowed domains: "${d}". Must contain a valid domain (e.g. example.com).`);
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    return errors;
+  }
+
   const actions = {
+    validateAgentConfig,
+
     setView(view, agentId = null) {
       state.currentView = view;
       if (agentId) {
@@ -194,7 +285,12 @@
     },
 
     saveChanges() {
-      if (!state.currentAgent) return;
+      if (!state.currentAgent) return false;
+      const errors = validateAgentConfig(state.currentAgent);
+      if (errors && errors.length > 0) {
+        addToast(`Validation error: ${errors[0]}`, 'error');
+        return false;
+      }
       state.currentAgent.updatedAt = new Date().toISOString();
       state.savedSnapshot = clone(state.currentAgent);
       state.hasUnsavedChanges = false;
@@ -206,6 +302,7 @@
       }
       addToast('Changes saved successfully!', 'success');
       notify();
+      return true;
     },
 
     discardChanges() {
@@ -218,6 +315,12 @@
     },
 
     openPublishModal() {
+      if (!state.currentAgent) return;
+      const errors = validateAgentConfig(state.currentAgent);
+      if (errors && errors.length > 0) {
+        addToast(`Cannot publish: ${errors[0]}`, 'error');
+        return;
+      }
       if (!state.hasUnsavedChanges && state.currentAgent.status === 'Published') {
         addToast('No changes to publish. Your agent is already up to date.', 'info');
         return;
@@ -285,12 +388,7 @@
 
       // After-create routing as strictly specified in assignment:
       // - Voice-only agent -> Behaviour -> Prompts
-      // - Agent with Email selected -> Email -> Inbox
-      if (newAgent.channels.email) {
-        state.configTab = 'email';
-      } else {
-        state.configTab = 'prompt';
-      }
+      state.configTab = 'prompt';
 
       addToast(`Agent "${newAgent.name}" created as Draft!`, 'success');
       notify();
@@ -574,13 +672,20 @@
     addVoiceDomain() {
       if (!state.voiceSettingsUi) state.voiceSettingsUi = { openSections: {} };
       const val = state.voiceSettingsUi.domainInput?.trim();
-      if (val && state.currentAgent) {
+      if (!val) return;
+      if (!val.includes('.')) {
+        addToast('Domain must contain a valid domain name (e.g. example.com)', 'error');
+        return;
+      }
+      if (state.currentAgent) {
         const currentDomains = state.currentAgent.voiceSettings.security.allowedDomains || [];
         if (!currentDomains.includes(val)) {
           state.currentAgent.voiceSettings.security.allowedDomains = [...currentDomains, val];
           state.hasUnsavedChanges = true;
           state.voiceSettingsUi.domainInput = '';
           notify();
+        } else {
+          addToast('Domain is already in the allowed list.', 'info');
         }
       }
     },

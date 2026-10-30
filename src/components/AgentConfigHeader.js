@@ -51,8 +51,14 @@
               <span>${agent.status}</span>
             </span>
 
+            <!-- Voice Architecture Badge (Retained throughout configuration per Section 4) -->
+            <span className="badge-channel" style="font-size: 11px; background: #EEF2FF; color: var(--color-primary); border: 1px solid #C7D2FE;" title="Active Voice Architecture">
+              ${renderIcon('phone', { size: 12, color: 'var(--color-primary)' })}
+              <span>${(agent.voiceModelOverride?.enabled ? agent.voiceModelOverride.speechStack : agent.speechStack) === 'realtime' ? 'Realtime Voice' : 'Cascaded STT/TTS'}</span>
+            </span>
+
             ${agent.versionId ? html`
-              <span style="font-size: 12px; color: var(--text-muted); font-family: monospace; background: #F3F4F6; padding: 2px 6px; border-radius: var(--radius-sm);">
+              <span style="font-size: 12px; color: var(--text-muted); font-family: monospace; background: #F3F4F6; padding: 2px 6px; border-radius: var(--radius-sm);" title="Published Version ID">
                 ${agent.versionId}
               </span>
             ` : ''}
@@ -125,16 +131,9 @@
       { id: 'overview', label: 'Overview', icon: 'sliders' },
       { id: 'prompt', label: 'Prompt', icon: 'file-text' },
       { id: 'tools', label: 'Tools', icon: 'wrench' },
-      { id: 'model', label: 'Model Settings', icon: 'cpu' }
+      { id: 'model', label: 'Model Settings', icon: 'cpu' },
+      { id: 'voice', label: 'Voice Settings', icon: 'volume-2' }
     ];
-
-    // Conditionally add channel-specific tabs based on enabled channels
-    if (agent.channels.voice) {
-      navItems.push({ id: 'voice', label: 'Voice Settings', icon: 'volume-2' });
-    }
-    if (agent.channels.email) {
-      navItems.push({ id: 'email', label: 'Email Settings', icon: 'mail' });
-    }
 
     return html`
       <div className="config-sidebar" aria-label="Configuration Sections">
@@ -182,21 +181,13 @@
               Active Channels
             </div>
             <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px;">
-              ${agent.channels.voice ? html`
-                <span className="badge-channel">
-                  ${renderIcon('phone', { size: 14, color: 'var(--color-primary)' })}
-                  <span>Voice (${agent.speechStack === 'realtime' ? 'Realtime Voice' : 'Cascaded'})</span>
-                </span>
-              ` : ''}
-              ${agent.channels.email ? html`
-                <span className="badge-channel">
-                  ${renderIcon('mail', { size: 14, color: '#D97706' })}
-                  <span>Email (${agent.emailSettings.inbox.mailboxes.length} mailbox)</span>
-                </span>
-              ` : ''}
+              <span className="badge-channel" style="background: #EEF2FF; color: var(--color-primary); border: 1px solid #C7D2FE;">
+                ${renderIcon('phone', { size: 14, color: 'var(--color-primary)' })}
+                <span>Voice (${(agent.voiceModelOverride?.enabled ? agent.voiceModelOverride.speechStack : agent.speechStack) === 'realtime' ? 'Realtime Voice' : 'Cascaded STT/TTS'})</span>
+              </span>
             </div>
             <div style="font-size: 13px; color: var(--text-secondary);">
-              Primary Language: <strong>${agent.language}</strong>
+              Primary Language: <strong>${agent.language || 'English (US)'}</strong>
             </div>
           </div>
 

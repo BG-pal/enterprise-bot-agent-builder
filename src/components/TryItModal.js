@@ -59,34 +59,22 @@
         <!-- ================= 2. CHANNEL SELECTOR & ARCHITECTURE LABEL ================= -->
         <div style="padding: 10px 24px; background: #F8FAFC; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; flex-wrap: wrap; gap: 10px;">
           <div className="radio-pill-group">
-            <!-- Voice Tab (selectable if enabled) -->
+            <!-- Voice Tab (Selected by default) -->
             <div 
-              className="radio-pill ${activeTab === 'voice' ? 'active' : ''} ${!agent.channels.voice ? 'disabled' : ''}"
-              onClick=${() => actions.setTryItChannel('voice')}
-              style="display: flex; align-items: center; gap: 6px; cursor: ${agent.channels.voice ? 'pointer' : 'not-allowed'}; opacity: ${agent.channels.voice ? 1 : 0.45};"
-              title="${agent.channels.voice ? 'Test Voice Channel' : 'Voice is not enabled for this agent'}"
+              className="radio-pill active"
+              style="display: flex; align-items: center; gap: 6px; cursor: default;"
+              title="Test Voice Channel (Active)"
             >
-              ${renderIcon('phone', { size: 14 })}
+              ${renderIcon('phone', { size: 14, color: 'var(--color-primary)' })}
               <span>Voice</span>
-              ${!agent.channels.voice ? html`<span style="font-size: 10px; color: var(--text-muted);">(Disabled)</span>` : ''}
-            </div>
-
-            <!-- Email Tab (selectable if enabled) -->
-            <div 
-              className="radio-pill ${activeTab === 'email' ? 'active' : ''} ${!agent.channels.email ? 'disabled' : ''}"
-              onClick=${() => actions.setTryItChannel('email')}
-              style="display: flex; align-items: center; gap: 6px; cursor: ${agent.channels.email ? 'pointer' : 'not-allowed'}; opacity: ${agent.channels.email ? 1 : 0.45};"
-              title="${agent.channels.email ? 'Test Email Channel' : 'Email is not enabled for this agent'}"
-            >
-              ${renderIcon('mail', { size: 14 })}
-              <span>Email</span>
-              ${!agent.channels.email ? html`<span style="font-size: 10px; color: var(--text-muted);">(Disabled)</span>` : ''}
             </div>
 
             <!-- Chat Tab (Disabled & Faded, Displays Soon) -->
             <div 
               className="radio-pill disabled"
               style="display: flex; align-items: center; gap: 6px; cursor: not-allowed; opacity: 0.45; pointer-events: none;"
+              tabIndex="-1"
+              aria-disabled="true"
               title="Chat channel is Coming Soon"
             >
               ${renderIcon('message-circle', { size: 14 })}
@@ -102,8 +90,7 @@
         </div>
 
         <!-- ================= 3. VOICE TESTING CONTENT ================= -->
-        ${activeTab === 'voice' ? html`
-          <div className="call-simulation-container" style="flex: 1; display: flex; flex-direction: column; min-height: 0; overflow: hidden;">
+        <div className="call-simulation-container" style="flex: 1; display: flex; flex-direction: column; min-height: 0; overflow: hidden;">
             
             <!-- A. INITIAL VOICE TESTING SCREEN (Idle State) -->
             ${tryIt.voiceState === 'idle' ? html`
@@ -368,272 +355,6 @@
             ` : ''}
 
           </div>
-        ` : ''}
-
-        <!-- ================= 4. EMAIL TESTING CONTENT ================= -->
-        ${activeTab === 'email' ? html`
-          <div style="flex: 1; overflow-y: auto; padding: 20px 24px; display: flex; flex-direction: column; gap: 20px;">
-            
-            <!-- Clear Prototype Simulation Notice Banner -->
-            <div style="background: #F8FAFC; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
-              <div style="display: flex; align-items: center; gap: 8px;">
-                ${renderIcon('info', { size: 16, color: 'var(--color-primary)' })}
-                <span style="font-size: 13px; color: var(--text-secondary);">
-                  <strong>Simulated Email Sandbox:</strong> This test runs locally. Nothing is delivered to external mail servers or real email addresses.
-                </span>
-              </div>
-              
-              ${tryIt.emailThread.length > 0 ? html`
-                <button 
-                  className="btn btn-secondary btn-sm"
-                  onClick=${() => actions.newTestEmail()}
-                  id="btn-new-test-email"
-                >
-                  ${renderIcon('plus', { size: 13 })}
-                  <span>New Test Email</span>
-                </button>
-              ` : ''}
-            </div>
-
-            <!-- Email Compose Form -->
-            <div className="card" style="margin-bottom: 0;">
-              
-              <!-- From and To Read-only Row -->
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;">
-                <div>
-                  <label className="form-label" style="display: flex; align-items: center; gap: 6px;">
-                    ${renderIcon('lock', { size: 12, color: 'var(--text-muted)' })}
-                    <span>From (Signed-in User, Read-only)</span>
-                  </label>
-                  <input 
-                    type="text" 
-                    className="form-input" 
-                    value=${tryIt.emailFrom} 
-                    disabled 
-                    style="background: #F3F4F6; color: var(--text-secondary); cursor: not-allowed;"
-                  />
-                </div>
-                
-                <div>
-                  <label className="form-label" style="display: flex; align-items: center; gap: 6px;">
-                    ${renderIcon('lock', { size: 12, color: 'var(--text-muted)' })}
-                    <span>To (Agent Mailbox, Read-only)</span>
-                  </label>
-                  <input 
-                    type="text" 
-                    className="form-input" 
-                    value=${agent.emailSettings?.inbox?.mailboxes?.[0]?.address || 'support@acme.enterprisebot.ai'} 
-                    disabled 
-                    style="background: #F3F4F6; color: var(--text-secondary); cursor: not-allowed;"
-                  />
-                </div>
-              </div>
-
-              <!-- Subject Input (Required) -->
-              <div className="form-group">
-                <label className="form-label required">
-                  Subject
-                </label>
-                <input 
-                  type="text" 
-                  className="form-input" 
-                  placeholder="e.g. Request for claim status update"
-                  value=${tryIt.emailSubject || ''}
-                  onInput=${(e) => actions.setTryItEmailSubject(e.target.value)}
-                />
-              </div>
-
-              <!-- Body Editor (Required) -->
-              <div className="form-group">
-                <label className="form-label required">
-                  Message Body
-                </label>
-                <textarea 
-                  className="form-textarea" 
-                  rows="4"
-                  placeholder="Hello, I submitted my insurance claim last week (reference CLM-98234). Could you please provide an update?"
-                  value=${tryIt.emailBody || ''}
-                  onInput=${(e) => actions.setTryItEmailBody(e.target.value)}
-                ></textarea>
-              </div>
-
-              <!-- Action Bar & Quick Templates -->
-              <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-top: 4px;">
-                <div style="display: flex; gap: 6px; flex-wrap: wrap;">
-                  <button 
-                    type="button"
-                    className="btn btn-secondary btn-sm"
-                    onClick=${() => {
-                      actions.setTryItEmailSubject('Request for claim status');
-                      actions.setTryItEmailBody('Hello, I submitted my insurance claim last week (reference CLM-98234). Could you please provide an update on when the adjuster will review it?');
-                    }}
-                  >
-                    Template: Claim Inquiry
-                  </button>
-                  <button 
-                    type="button"
-                    className="btn btn-secondary btn-sm"
-                    onClick=${() => {
-                      actions.setTryItEmailSubject('Billing invoice clarification');
-                      actions.setTryItEmailBody('Hi support team, I noticed an unexpected deductible charge on my latest statement. Can you verify this for me?');
-                    }}
-                  >
-                    Template: Billing Question
-                  </button>
-                </div>
-
-                <!-- Send Button (Disabled until both Subject and Body are filled) -->
-                <button 
-                  type="button"
-                  className="btn btn-primary"
-                  onClick=${() => actions.sendTryItEmail()}
-                  disabled=${!tryIt.emailSubject?.trim() || !tryIt.emailBody?.trim() || tryIt.isReplying}
-                  id="btn-send-test-email"
-                >
-                  ${tryIt.isReplying ? html`
-                    <span className="pulsing-dot" style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: white;"></span>
-                    <span>Sending & Replying…</span>
-                  ` : html`
-                    ${renderIcon('send', { size: 14, color: '#FFFFFF' })}
-                    <span>Send Test Email</span>
-                  `}
-                </button>
-              </div>
-            </div>
-
-            <!-- Email Thread Messages -->
-            <div className="email-thread" style="display: flex; flex-direction: column; gap: 14px;">
-              
-              <!-- Writing a reply state indicator -->
-              ${tryIt.isReplying ? html`
-                <div style="padding: 16px; background: white; border: 1px solid var(--border-color); border-radius: var(--radius-lg); display: flex; align-items: center; gap: 10px; color: var(--text-secondary); box-shadow: var(--shadow-sm); animation: fadeIn 0.15s ease-out;">
-                  <span className="pulsing-dot" style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--color-primary);"></span>
-                  <span style="font-size: 13px; font-weight: 600; color: var(--color-primary);">
-                    Writing a reply using ${agent.sharedModel.model}…
-                  </span>
-                </div>
-              ` : ''}
-
-              <!-- Thread Message Cards -->
-              ${tryIt.emailThread.map(msg => {
-                const detailsExpanded = Boolean(tryIt.expandedDetails[msg.id]);
-
-                return html`
-                  <div key=${msg.id} className="email-message-card">
-                    <!-- Message Header with Expand / Collapse Toggle -->
-                    <div 
-                      className="email-message-header" 
-                      onClick=${() => actions.toggleTryItEmailMessage(msg.id)}
-                      style="user-select: none;"
-                    >
-                      <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-                        <span className="badge ${msg.type === 'user' ? 'badge-draft' : 'badge-published'}">
-                          ${msg.type === 'user' ? 'Inbound' : 'Agent Reply'}
-                        </span>
-                        <strong style="font-size: 14px; color: var(--text-primary);">${msg.subject}</strong>
-                        <span style="font-size: 12px; color: var(--text-secondary);">${'<' + msg.sender + '>'}</span>
-                      </div>
-                      
-                      <div style="display: flex; align-items: center; gap: 10px;">
-                        <span style="font-size: 12px; color: var(--text-muted);">${msg.timestamp}</span>
-                        ${renderIcon(msg.isExpanded ? 'chevron-up' : 'chevron-down', { size: 16, color: 'var(--text-muted)' })}
-                      </div>
-                    </div>
-
-                    <!-- Message Body (Expanded by default for newest message) -->
-                    ${msg.isExpanded ? html`
-                      <div className="email-message-body" style="padding: 18px 20px; font-size: 14px; line-height: 1.6;">
-                        <div style="white-space: pre-wrap; color: var(--text-primary);">${msg.body}</div>
-
-                        <!-- Agent Replies: Execution Details (Tools Used & Extracted Entities, Hidden by Default) -->
-                        ${msg.type === 'agent' ? html`
-                          <div style="margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border-color);">
-                            <!-- Toggle Button to reveal/hide details -->
-                            <button 
-                              type="button"
-                              className="btn btn-secondary btn-sm"
-                              onClick=${(e) => {
-                                e.stopPropagation();
-                                actions.toggleTryItEmailDetails(msg.id);
-                              }}
-                              style="font-size: 12px; gap: 6px;"
-                            >
-                              ${renderIcon(detailsExpanded ? 'chevron-up' : 'chevron-down', { size: 13 })}
-                              <span>
-                                ${detailsExpanded 
-                                  ? 'Hide Execution Details' 
-                                  : `Show Execution Details (${msg.toolsUsed?.length || 0} Tools, ${msg.extractedEntities?.length || 0} Entities)`
-                                }
-                              </span>
-                            </button>
-
-                            <!-- Hidden-by-default execution details container -->
-                            ${detailsExpanded ? html`
-                              <div style="margin-top: 14px; padding: 14px 16px; background: #F8FAFC; border: 1px solid var(--border-color); border-radius: var(--radius-md); display: flex; flex-direction: column; gap: 14px; animation: fadeIn 0.15s ease-out;">
-                                
-                                <!-- Tools Used -->
-                                ${msg.toolsUsed && msg.toolsUsed.length > 0 ? html`
-                                  <div>
-                                    <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px; letter-spacing: 0.04em;">
-                                      Tools Executed During Reply Generation:
-                                    </div>
-                                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                                      ${msg.toolsUsed.map(t => html`
-                                        <span key=${t} className="turn-tool-badge" style="margin: 0;">
-                                          ${renderIcon('wrench', { size: 12 })}
-                                          <span>${t}</span>
-                                        </span>
-                                      `)}
-                                    </div>
-                                  </div>
-                                ` : ''}
-
-                                <!-- Extracted Entities Table -->
-                                ${msg.extractedEntities && msg.extractedEntities.length > 0 ? html`
-                                  <div>
-                                    <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px; letter-spacing: 0.04em;">
-                                      Extracted Entities & Confidence:
-                                    </div>
-                                    <div style="background: #FFFFFF; border: 1px solid var(--border-color); border-radius: var(--radius-sm); overflow-x: auto;">
-                                      <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
-                                        <thead>
-                                          <tr style="background: #F1F5F9; text-align: left; color: var(--text-secondary);">
-                                            <th style="padding: 6px 12px;">Entity Key</th>
-                                            <th style="padding: 6px 12px;">Extracted Value</th>
-                                            <th style="padding: 6px 12px;">Confidence Score</th>
-                                          </tr>
-                                        </thead>
-                                        <tbody>
-                                          ${msg.extractedEntities.map(e => html`
-                                            <tr key=${e.name} style="border-top: 1px solid var(--border-color);">
-                                              <td style="padding: 6px 12px; font-family: monospace; font-weight: 600; color: var(--color-primary);">${e.name}</td>
-                                              <td style="padding: 6px 12px; font-weight: 500;">${e.value}</td>
-                                              <td style="padding: 6px 12px; color: var(--color-success); font-weight: 700;">${e.confidence}</td>
-                                            </tr>
-                                          `)}
-                                        </tbody>
-                                      </table>
-                                    </div>
-                                  </div>
-                                ` : ''}
-
-                              </div>
-                            ` : ''}
-                          </div>
-                        ` : ''}
-
-                      </div>
-                    ` : ''}
-
-                  </div>
-                `;
-              })}
-
-            </div>
-
-          </div>
-        ` : ''}
-
         </div>
       </div>
     `;
