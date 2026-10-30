@@ -69,6 +69,7 @@ const TIMEZONES = [
 ];
 
 const STT_PROVIDERS = [
+  'Team default service',
   'Azure Speech Services',
   'Soniox Realtime',
   'Deepgram Nova-2',
@@ -76,8 +77,8 @@ const STT_PROVIDERS = [
 ];
 
 const TTS_PROVIDERS = [
-  'Azure Neural TTS',
-  'ElevenLabs Multilingual v2'
+  'Azure',
+  'ElevenLabs'
 ];
 
 const TEAM_TOOLS = [
@@ -214,7 +215,7 @@ const DEFAULT_AGENT_CONFIG = {
     speech: {
       activeTab: 'stt',
       stt: {
-        provider: 'Azure Speech Services',
+        provider: 'Team default service',
         languages: ['en-US', 'de-DE'],
         replyInDetectedLanguage: false,
         segmentationSilenceTimeout: 500,
@@ -224,8 +225,24 @@ const DEFAULT_AGENT_CONFIG = {
         silenceTimeout: 400
       },
       tts: {
-        provider: 'Azure Neural TTS',
+        provider: 'Azure',
         voice: 'en-US-JennyNeural',
+        azure: {
+          voice: 'en-US-JennyNeural',
+          speed: 1.1,
+          pitch: 'default',
+          volume: 'default',
+          style: 'neutral',
+          styleDegree: 1.0
+        },
+        elevenLabs: {
+          voiceId: '21m00Tcm4TlvDq8ikWAM',
+          model: 'eleven_flash_v2_5',
+          stability: 0.5,
+          similarity: 0.75,
+          styleExaggeration: 0,
+          speakerBoost: true
+        },
         azureSpeed: 1.1,
         azurePitch: 'Default',
         azureVolume: 'Default',
@@ -402,6 +419,10 @@ const INITIAL_AGENTS = [
     description: 'Qualifies inbound enterprise sales leads and schedules discovery calls with regional account executives.',
     channels: { voice: true, email: false, chat: false },
     speechStack: 'realtime',
+    voiceModelOverride: {
+      ...DEFAULT_AGENT_CONFIG.voiceModelOverride,
+      speechStack: 'realtime'
+    },
     language: 'English (US)',
     welcomeMessage: 'Hi there! Thanks for calling Acme Solutions. Are you interested in enterprise automation or scheduling a demo with our product team?',
     instructions: 'You are a friendly and proactive sales qualification agent. Ask about company size, primary use case, and schedule meetings.',

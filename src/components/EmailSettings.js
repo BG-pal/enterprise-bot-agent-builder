@@ -215,46 +215,79 @@
           </div>
 
           <!-- Conditional Send As Fields -->
-          ${agent.emailSettings.threading.sendAs === 'On behalf of a named person' ? html`
-            <div style="background: #F8FAFC; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 14px; margin-bottom: 16px;">
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
-                <div>
-                  <label className="form-label required">Person Name</label>
-                  <input 
-                    type="text" 
-                    className="form-input" 
-                    placeholder="e.g. Alex Support Specialist"
-                    value=${agent.emailSettings.threading.personName}
-                    onInput=${(e) => updateEmail('threading', 'personName', e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label className="form-label required">Person Email Address</label>
-                  <input 
-                    type="email" 
-                    className="form-input" 
-                    placeholder="e.g. alex@acme.enterprisebot.ai"
-                    value=${agent.emailSettings.threading.personAddress}
-                    onInput=${(e) => updateEmail('threading', 'personAddress', e.target.value)}
-                  />
-                  <div className="helper-text">Mailbox must grant "Send on behalf of" permission.</div>
+          ${agent.emailSettings.threading.sendAs === 'On behalf of a named person' ? (() => {
+            const personNameVal = agent.emailSettings.threading.personName || '';
+            const personAddressVal = agent.emailSettings.threading.personAddress || '';
+            const isNameEmpty = !personNameVal.trim();
+            const isAddressInvalid = !personAddressVal.trim() || !personAddressVal.includes('@');
+
+            return html`
+              <div style="background: #F8FAFC; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 14px; margin-bottom: 16px; animation: fadeIn 0.15s ease-out;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+                  <div>
+                    <label className="form-label required">Person Name</label>
+                    <input 
+                      type="text" 
+                      className="form-input ${isNameEmpty ? 'is-invalid' : ''}" 
+                      placeholder="e.g. Alex Support Specialist"
+                      value=${personNameVal}
+                      onInput=${(e) => updateEmail('threading', 'personName', e.target.value)}
+                    />
+                    ${isNameEmpty ? html`
+                      <div className="invalid-feedback" style="color: var(--color-danger); font-size: 12px; margin-top: 4px; display: flex; align-items: center; gap: 4px;">
+                        ${renderIcon('alert-circle', { size: 12 })}
+                        <span>Person Name is required.</span>
+                      </div>
+                    ` : ''}
+                  </div>
+                  <div>
+                    <label className="form-label required">Person Email Address</label>
+                    <input 
+                      type="email" 
+                      className="form-input ${isAddressInvalid ? 'is-invalid' : ''}" 
+                      placeholder="e.g. alex@acme.enterprisebot.ai"
+                      value=${personAddressVal}
+                      onInput=${(e) => updateEmail('threading', 'personAddress', e.target.value)}
+                    />
+                    ${isAddressInvalid ? html`
+                      <div className="invalid-feedback" style="color: var(--color-danger); font-size: 12px; margin-top: 4px; display: flex; align-items: center; gap: 4px;">
+                        ${renderIcon('alert-circle', { size: 12 })}
+                        <span>Valid email address is required.</span>
+                      </div>
+                    ` : html`
+                      <div className="helper-text">Mailbox must grant "Send on behalf of" permission.</div>
+                    `}
+                  </div>
                 </div>
               </div>
-            </div>
-          ` : ''}
+            `;
+          })() : ''}
 
-          ${agent.emailSettings.threading.sendAs === 'A separate reply-to address' ? html`
-            <div className="form-group">
-              <label className="form-label required">Reply-to Address</label>
-              <input 
-                type="email" 
-                className="form-input" 
-                placeholder="e.g. replies@acme.enterprisebot.ai"
-                value=${agent.emailSettings.threading.replyToAddress}
-                onInput=${(e) => updateEmail('threading', 'replyToAddress', e.target.value)}
-              />
-            </div>
-          ` : ''}
+          ${agent.emailSettings.threading.sendAs === 'A separate reply-to address' ? (() => {
+            const replyToVal = agent.emailSettings.threading.replyToAddress || '';
+            const isReplyToInvalid = !replyToVal.trim() || !replyToVal.includes('@');
+
+            return html`
+              <div className="form-group" style="animation: fadeIn 0.15s ease-out;">
+                <label className="form-label required">Reply-to Address</label>
+                <input 
+                  type="email" 
+                  className="form-input ${isReplyToInvalid ? 'is-invalid' : ''}" 
+                  placeholder="e.g. replies@acme.enterprisebot.ai"
+                  value=${replyToVal}
+                  onInput=${(e) => updateEmail('threading', 'replyToAddress', e.target.value)}
+                />
+                ${isReplyToInvalid ? html`
+                  <div className="invalid-feedback" style="color: var(--color-danger); font-size: 12px; margin-top: 4px; display: flex; align-items: center; gap: 4px;">
+                    ${renderIcon('alert-circle', { size: 12 })}
+                    <span>Reply-to email address is required.</span>
+                  </div>
+                ` : html`
+                  <div className="helper-text">Replies from the customer are routed to this address instead.</div>
+                `}
+              </div>
+            `;
+          })() : ''}
 
           <!-- Quote Original & CC -->
           <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
@@ -553,8 +586,27 @@
             <div>
               <h3 className="card-title">Attachments Handling</h3>
               <div className="card-subtitle">
-                OCR and PDF reading policies (up to 5MB per file, 20MB / 10 files per email).
+                OCR and PDF reading policies and attachment inbound processing rules.
               </div>
+            </div>
+            <span className="badge badge-published">Content Pipeline</span>
+          </div>
+
+          <!-- Explicit Attachment Specifications & Limits Callout (CSV Requirements) -->
+          <div style="background: #F0F5FF; border: 1px solid #BCD3F9; border-radius: var(--radius-md); padding: 14px 16px; margin-bottom: 20px;">
+            <div style="font-weight: 700; font-size: 13px; color: #1E40AF; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+              ${renderIcon('paperclip', { size: 15, color: '#1E40AF' })}
+              <span>Attachment Limits & Format Policies</span>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; font-size: 13px; color: var(--text-primary); margin-bottom: 10px;">
+              <div>• <strong>Max per file:</strong> 5 MB</div>
+              <div>• <strong>Max per email:</strong> 20 MB total</div>
+              <div>• <strong>File count:</strong> Up to 10 files / email</div>
+              <div>• <strong>PDF reading limit:</strong> 20 pages (default)</div>
+            </div>
+            <div style="font-size: 12px; color: var(--text-secondary); line-height: 1.5; border-top: 1px dashed #CBD5E1; padding-top: 8px;">
+              <div><strong>Supported formats:</strong> PDF, DOCX, TXT, PNG, JPG.</div>
+              <div><strong>Handling of unsupported formats:</strong> Senders are automatically informed which formats are supported and how to resubmit.</div>
             </div>
           </div>
 

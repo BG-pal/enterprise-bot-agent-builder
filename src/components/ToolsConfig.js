@@ -182,7 +182,7 @@
                         ${hasCompatibilityIssue ? html`
                           <span className="badge badge-alpha" title="This tool does not support speech-to-speech realtime execution">
                             ${renderIcon('alert-triangle', { size: 12 })}
-                            <span>Not on Realtime voice compatibility</span>
+                            <span>Not on Realtime voice</span>
                           </span>
                         ` : ''}
                       </div>
@@ -197,7 +197,7 @@
 
             ${agent.assignedTools.length === 0 ? html`
               <div style="text-align: center; padding: 24px; color: var(--text-muted); font-size: 13px;">
-                No tools assigned. Select one or more tools above to enable external queries.
+                No tools assigned.
               </div>
             ` : ''}
           </div>

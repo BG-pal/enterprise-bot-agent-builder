@@ -243,7 +243,21 @@
                 <input 
                   type="checkbox" 
                   checked=${agent.voiceModelOverride.enabled}
-                  onChange=${(e) => updateVoiceOverride('enabled', e.target.checked)}
+                  onChange=${(e) => {
+                    const isEnabling = e.target.checked;
+                    if (isEnabling) {
+                      const inheritedStack = agent.speechStack || agent.voiceModelOverride?.speechStack || 'cascaded';
+                      actions.updateCurrentAgent({
+                        voiceModelOverride: {
+                          ...agent.voiceModelOverride,
+                          enabled: true,
+                          speechStack: inheritedStack
+                        }
+                      });
+                    } else {
+                      updateVoiceOverride('enabled', false);
+                    }
+                  }}
                 />
                 <span className="toggle-slider"></span>
               </label>

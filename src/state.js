@@ -10,6 +10,12 @@
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
+          // Normalize TTS provider and STT provider for full consistency across sessions
+          parsed.forEach(a => {
+            if (a.voiceSettings?.speech?.tts?.provider === 'Azure Neural TTS') {
+              a.voiceSettings.speech.tts.provider = 'Azure';
+            }
+          });
           return parsed;
         }
       }

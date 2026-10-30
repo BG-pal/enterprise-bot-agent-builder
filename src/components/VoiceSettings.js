@@ -17,6 +17,31 @@
     const domainInput = state.voiceSettingsUi?.domainInput || '';
     const sttLangInput = state.voiceSettingsUi?.sttLangInput || '';
 
+    // Stack and architecture verification
+    const isRealtime = (agent.voiceModelOverride?.enabled ? agent.voiceModelOverride.speechStack : agent.speechStack) === 'realtime';
+    const isVoiceOverrideEnabled = !!agent.voiceModelOverride?.enabled;
+    const isExternalTranscriptionAllowed = agent.channels.voice && isRealtime && isVoiceOverrideEnabled;
+
+    // Safe extraction of TTS parameters
+    const tts = agent.voiceSettings.speech.tts || {};
+    const ttsProvider = (tts.provider === 'ElevenLabs') ? 'ElevenLabs' : 'Azure';
+    const azure = tts.azure || {
+      voice: tts.voice || 'en-US-JennyNeural',
+      speed: tts.azureSpeed || 1.1,
+      pitch: tts.azurePitch || 'Default',
+      volume: tts.azureVolume || 'Default',
+      style: tts.azureStyle || 'Neutral',
+      styleDegree: tts.azureStyleDegree || 1.0
+    };
+    const elevenLabs = tts.elevenLabs || {
+      voiceId: tts.elevenLabsVoiceId || '21m00Tcm4TlvDq8ikWAM',
+      model: tts.elevenLabsModel || 'eleven_flash_v2_5',
+      stability: tts.elevenLabsStability ?? 0.5,
+      similarity: tts.elevenLabsSimilarity ?? 0.75,
+      styleExaggeration: tts.elevenLabsStyleExaggeration || 0,
+      speakerBoost: tts.elevenLabsSpeakerBoost ?? true
+    };
+
     function updateVoice(section, key, val) {
       actions.updateCurrentAgent({
         voiceSettings: {
@@ -24,6 +49,40 @@
           [section]: {
             ...agent.voiceSettings[section],
             [key]: val
+          }
+        }
+      });
+    }
+
+    function updateAzureTts(key, val) {
+      actions.updateCurrentAgent({
+        voiceSettings: {
+          ...agent.voiceSettings,
+          speech: {
+            ...agent.voiceSettings.speech,
+            tts: {
+              ...tts,
+              provider: 'Azure',
+              azure: { ...azure, [key]: val },
+              [key === 'voice' ? 'voice' : 'azure' + key.charAt(0).toUpperCase() + key.slice(1)]: val
+            }
+          }
+        }
+      });
+    }
+
+    function updateElevenLabsTts(key, val) {
+      actions.updateCurrentAgent({
+        voiceSettings: {
+          ...agent.voiceSettings,
+          speech: {
+            ...agent.voiceSettings.speech,
+            tts: {
+              ...tts,
+              provider: 'ElevenLabs',
+              elevenLabs: { ...elevenLabs, [key]: val },
+              ['elevenLabs' + key.charAt(0).toUpperCase() + key.slice(1)]: val
+            }
           }
         }
       });
@@ -57,28 +116,39 @@
 
           ${openSections.transcription ? html`
             <div className="accordion-content">
-              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+              ${!isExternalTranscriptionAllowed ? html`
+                <div style="background: #FFFBEB; border: 1px solid #FCD34D; border-radius: var(--radius-md); padding: 12px 14px; margin-bottom: 16px; display: flex; align-items: flex-start; gap: 10px;">
+                  ${renderIcon('alert-triangle', { size: 16, color: '#D97706' })}
+                  <div style="font-size: 13px; color: #92400E; line-height: 1.4;">
+                    <strong>External Transcription Unavailable:</strong> This feature is restricted to agents using <strong>Realtime Voice</strong> with <strong>Voice Model Override enabled</strong>. To activate, enable Model Override under Model Settings and select the Realtime stack.
+                  </div>
+                </div>
+              ` : ''}
+
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; opacity: ${isExternalTranscriptionAllowed ? 1 : 0.6};">
                 <div>
                   <div style="font-weight: 700; font-size: 14px;">Enable external transcription</div>
                   <div className="text-secondary" style="font-size: 13px;">
-                    Only available for Realtime Voice with custom model override active.
+                    Use an alternate STT path for the realtime model's user transcripts. Alpha feature.
                   </div>
                 </div>
                 <label className="toggle-switch">
                   <input 
                     type="checkbox" 
-                    checked=${agent.voiceSettings.transcription.externalTranscription}
+                    disabled=${!isExternalTranscriptionAllowed}
+                    checked=${isExternalTranscriptionAllowed && agent.voiceSettings.transcription.externalTranscription}
                     onChange=${(e) => updateVoice('transcription', 'externalTranscription', e.target.checked)}
                   />
                   <span className="toggle-slider"></span>
                 </label>
               </div>
 
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; opacity: ${isExternalTranscriptionAllowed ? 1 : 0.6};">
                 <div className="form-group" style="margin-bottom: 0;">
                   <label className="form-label">Transcription STT profile</label>
                   <select 
                     className="form-select"
+                    disabled=${!isExternalTranscriptionAllowed}
                     value=${agent.voiceSettings.transcription.sttProfile}
                     onChange=${(e) => updateVoice('transcription', 'sttProfile', e.target.value)}
                   >
@@ -93,6 +163,7 @@
                   <input 
                     type="text" 
                     className="form-input" 
+                    disabled=${!isExternalTranscriptionAllowed}
                     value=${agent.voiceSettings.transcription.allowedLanguages}
                     onInput=${(e) => updateVoice('transcription', 'allowedLanguages', e.target.value)}
                     placeholder="e.g. en, hi, es"
@@ -356,16 +427,8 @@
                     <label className="form-label required">Select TTS Provider</label>
                     <div style="display: flex; gap: 12px;">
                       <div 
-                        className="selection-card ${agent.voiceSettings.speech.tts.provider === 'Azure' ? 'selected' : ''}"
-                        onClick=${() => actions.updateCurrentAgent({
-                          voiceSettings: {
-                            ...agent.voiceSettings,
-                            speech: {
-                              ...agent.voiceSettings.speech,
-                              tts: { ...agent.voiceSettings.speech.tts, provider: 'Azure' }
-                            }
-                          }
-                        })}
+                        className="selection-card ${ttsProvider === 'Azure' ? 'selected' : ''}"
+                        onClick=${() => updateTts('provider', 'Azure')}
                         style="flex: 1; padding: 14px; cursor: pointer;"
                       >
                         <div style="font-weight: 700; font-size: 14px;">Azure Speech Services</div>
@@ -373,16 +436,8 @@
                       </div>
 
                       <div 
-                        className="selection-card ${agent.voiceSettings.speech.tts.provider === 'ElevenLabs' ? 'selected' : ''}"
-                        onClick=${() => actions.updateCurrentAgent({
-                          voiceSettings: {
-                            ...agent.voiceSettings,
-                            speech: {
-                              ...agent.voiceSettings.speech,
-                              tts: { ...agent.voiceSettings.speech.tts, provider: 'ElevenLabs' }
-                            }
-                          }
-                        })}
+                        className="selection-card ${ttsProvider === 'ElevenLabs' ? 'selected' : ''}"
+                        onClick=${() => updateTts('provider', 'ElevenLabs')}
                         style="flex: 1; padding: 14px; cursor: pointer;"
                       >
                         <div style="font-weight: 700; font-size: 14px;">ElevenLabs Turbo</div>
@@ -392,7 +447,7 @@
                   </div>
 
                   <!-- Azure Specific TTS Controls -->
-                  ${agent.voiceSettings.speech.tts.provider === 'Azure' ? html`
+                  ${ttsProvider === 'Azure' ? html`
                     <div style="background: #F8FAFC; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 18px; margin-bottom: 16px;">
                       <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 14px; color: var(--text-primary);">Azure TTS Voice & Prosody</h4>
                       
@@ -401,19 +456,8 @@
                           <label className="form-label">Voice (TTS)</label>
                           <select 
                             className="form-select"
-                            value=${agent.voiceSettings.speech.tts.azure.voice}
-                            onChange=${(e) => actions.updateCurrentAgent({
-                              voiceSettings: {
-                                ...agent.voiceSettings,
-                                speech: {
-                                  ...agent.voiceSettings.speech,
-                                  tts: {
-                                    ...agent.voiceSettings.speech.tts,
-                                    azure: { ...agent.voiceSettings.speech.tts.azure, voice: e.target.value }
-                                  }
-                                }
-                              }
-                            })}
+                            value=${azure.voice}
+                            onChange=${(e) => updateAzureTts('voice', e.target.value)}
                           >
                             <option value="en-US-JennyNeural">en-US-JennyNeural (Warm & Friendly)</option>
                             <option value="en-US-GuyNeural">en-US-GuyNeural (Professional & Direct)</option>
@@ -426,19 +470,8 @@
                           <label className="form-label">Speaking Style</label>
                           <select 
                             className="form-select"
-                            value=${agent.voiceSettings.speech.tts.azure.style}
-                            onChange=${(e) => actions.updateCurrentAgent({
-                              voiceSettings: {
-                                ...agent.voiceSettings,
-                                speech: {
-                                  ...agent.voiceSettings.speech,
-                                  tts: {
-                                    ...agent.voiceSettings.speech.tts,
-                                    azure: { ...agent.voiceSettings.speech.tts.azure, style: e.target.value }
-                                  }
-                                }
-                              }
-                            })}
+                            value=${azure.style}
+                            onChange=${(e) => updateAzureTts('style', e.target.value)}
                           >
                             <option value="neutral">Neutral (Default)</option>
                             <option value="empathetic">Empathetic / Customer Support</option>
@@ -450,44 +483,22 @@
 
                       <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 14px;">
                         <div>
-                          <label className="form-label">Speed: ${agent.voiceSettings.speech.tts.azure.speed}x</label>
+                          <label className="form-label">Speed: ${azure.speed}x</label>
                           <input 
                             type="range" min="0.8" max="1.5" step="0.05"
                             className="form-range"
-                            value=${agent.voiceSettings.speech.tts.azure.speed}
-                            onInput=${(e) => actions.updateCurrentAgent({
-                              voiceSettings: {
-                                ...agent.voiceSettings,
-                                speech: {
-                                  ...agent.voiceSettings.speech,
-                                  tts: {
-                                    ...agent.voiceSettings.speech.tts,
-                                    azure: { ...agent.voiceSettings.speech.tts.azure, speed: parseFloat(e.target.value) }
-                                  }
-                                }
-                              }
-                            })}
+                            value=${azure.speed}
+                            onInput=${(e) => updateAzureTts('speed', parseFloat(e.target.value))}
                           />
                           <div className="helper-text">Default: 1.1x</div>
                         </div>
 
                         <div>
-                          <label className="form-label">Pitch: ${agent.voiceSettings.speech.tts.azure.pitch}</label>
+                          <label className="form-label">Pitch: ${azure.pitch}</label>
                           <select 
                             className="form-select"
-                            value=${agent.voiceSettings.speech.tts.azure.pitch}
-                            onChange=${(e) => actions.updateCurrentAgent({
-                              voiceSettings: {
-                                ...agent.voiceSettings,
-                                speech: {
-                                  ...agent.voiceSettings.speech,
-                                  tts: {
-                                    ...agent.voiceSettings.speech.tts,
-                                    azure: { ...agent.voiceSettings.speech.tts.azure, pitch: e.target.value }
-                                  }
-                                }
-                              }
-                            })}
+                            value=${azure.pitch}
+                            onChange=${(e) => updateAzureTts('pitch', e.target.value)}
                           >
                             <option value="default">Default</option>
                             <option value="low">Low (-5%)</option>
@@ -496,23 +507,12 @@
                         </div>
 
                         <div>
-                          <label className="form-label">Style Degree: ${agent.voiceSettings.speech.tts.azure.styleDegree}</label>
+                          <label className="form-label">Style Degree: ${azure.styleDegree}</label>
                           <input 
                             type="range" min="0.5" max="2.0" step="0.1"
                             className="form-range"
-                            value=${agent.voiceSettings.speech.tts.azure.styleDegree}
-                            onInput=${(e) => actions.updateCurrentAgent({
-                              voiceSettings: {
-                                ...agent.voiceSettings,
-                                speech: {
-                                  ...agent.voiceSettings.speech,
-                                  tts: {
-                                    ...agent.voiceSettings.speech.tts,
-                                    azure: { ...agent.voiceSettings.speech.tts.azure, styleDegree: parseFloat(e.target.value) }
-                                  }
-                                }
-                              }
-                            })}
+                            value=${azure.styleDegree}
+                            onInput=${(e) => updateAzureTts('styleDegree', parseFloat(e.target.value))}
                           />
                           <div className="helper-text">Default: 1.0</div>
                         </div>
@@ -521,7 +521,7 @@
                   ` : ''}
 
                   <!-- ElevenLabs Specific TTS Controls -->
-                  ${agent.voiceSettings.speech.tts.provider === 'ElevenLabs' ? html`
+                  ${ttsProvider === 'ElevenLabs' ? html`
                     <div style="background: #F8FAFC; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 18px; margin-bottom: 16px;">
                       <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 14px; color: var(--text-primary);">ElevenLabs Turbo Parameters</h4>
                       
@@ -530,23 +530,13 @@
                           <label className="form-label">Voice ID</label>
                           <select 
                             className="form-select"
-                            value=${agent.voiceSettings.speech.tts.elevenLabs.voiceId}
-                            onChange=${(e) => actions.updateCurrentAgent({
-                              voiceSettings: {
-                                ...agent.voiceSettings,
-                                speech: {
-                                  ...agent.voiceSettings.speech,
-                                  tts: {
-                                    ...agent.voiceSettings.speech.tts,
-                                    elevenLabs: { ...agent.voiceSettings.speech.tts.elevenLabs, voiceId: e.target.value }
-                                  }
-                                }
-                              }
-                            })}
+                            value=${elevenLabs.voiceId}
+                            onChange=${(e) => updateElevenLabsTts('voiceId', e.target.value)}
                           >
-                            <option value="eleven_flash_v2_5">eleven_flash_v2_5 (Lowest Latency)</option>
-                            <option value="rachel_calm_support">rachel_calm_support (Support Agent)</option>
-                            <option value="josh_direct">josh_direct (Claims Adjuster)</option>
+                            <option value="21m00Tcm4TlvDq8ikWAM">Rachel (Calm & Natural)</option>
+                            <option value="AZnzlk1XvdvUeBnXmlld">Domi (Warm Customer Support)</option>
+                            <option value="EXAVITQu4vr4xnSDxMaL">Bella (Expressive)</option>
+                            <option value="ErXwobaYiN019PkySvjV">Antoni (Direct & Confident)</option>
                           </select>
                         </div>
 
@@ -556,53 +546,32 @@
                             type="text" 
                             className="form-input" 
                             disabled 
-                            value=${agent.voiceSettings.speech.tts.elevenLabs.model} 
+                            value="eleven_flash_v2_5" 
                             style="background: #F3F4F6;"
                           />
+                          <div className="helper-text">Model: eleven_flash_v2_5</div>
                         </div>
                       </div>
 
                       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
                         <div>
-                          <label className="form-label">Stability: ${agent.voiceSettings.speech.tts.elevenLabs.stability}</label>
+                          <label className="form-label">Stability: ${elevenLabs.stability}</label>
                           <input 
                             type="range" min="0" max="1" step="0.05"
                             className="form-range"
-                            value=${agent.voiceSettings.speech.tts.elevenLabs.stability}
-                            onInput=${(e) => actions.updateCurrentAgent({
-                              voiceSettings: {
-                                ...agent.voiceSettings,
-                                speech: {
-                                  ...agent.voiceSettings.speech,
-                                  tts: {
-                                    ...agent.voiceSettings.speech.tts,
-                                    elevenLabs: { ...agent.voiceSettings.speech.tts.elevenLabs, stability: parseFloat(e.target.value) }
-                                  }
-                                }
-                              }
-                            })}
+                            value=${elevenLabs.stability}
+                            onInput=${(e) => updateElevenLabsTts('stability', parseFloat(e.target.value))}
                           />
                           <div className="helper-text">Default: 0.5</div>
                         </div>
 
                         <div>
-                          <label className="form-label">Similarity: ${agent.voiceSettings.speech.tts.elevenLabs.similarity}</label>
+                          <label className="form-label">Similarity: ${elevenLabs.similarity}</label>
                           <input 
                             type="range" min="0" max="1" step="0.05"
                             className="form-range"
-                            value=${agent.voiceSettings.speech.tts.elevenLabs.similarity}
-                            onInput=${(e) => actions.updateCurrentAgent({
-                              voiceSettings: {
-                                ...agent.voiceSettings,
-                                speech: {
-                                  ...agent.voiceSettings.speech,
-                                  tts: {
-                                    ...agent.voiceSettings.speech.tts,
-                                    elevenLabs: { ...agent.voiceSettings.speech.tts.elevenLabs, similarity: parseFloat(e.target.value) }
-                                  }
-                                }
-                              }
-                            })}
+                            value=${elevenLabs.similarity}
+                            onInput=${(e) => updateElevenLabsTts('similarity', parseFloat(e.target.value))}
                           />
                           <div className="helper-text">Default: 0.75</div>
                         </div>
@@ -616,19 +585,8 @@
                         <label className="toggle-switch">
                           <input 
                             type="checkbox" 
-                            checked=${agent.voiceSettings.speech.tts.elevenLabs.speakerBoost}
-                            onChange=${(e) => actions.updateCurrentAgent({
-                              voiceSettings: {
-                                ...agent.voiceSettings,
-                                speech: {
-                                  ...agent.voiceSettings.speech,
-                                  tts: {
-                                    ...agent.voiceSettings.speech.tts,
-                                    elevenLabs: { ...agent.voiceSettings.speech.tts.elevenLabs, speakerBoost: e.target.checked }
-                                  }
-                                }
-                              }
-                            })}
+                            checked=${elevenLabs.speakerBoost}
+                            onChange=${(e) => updateElevenLabsTts('speakerBoost', e.target.checked)}
                           />
                           <span className="toggle-slider"></span>
                         </label>
@@ -653,6 +611,7 @@
             <div className="accordion-title">
               ${renderIcon('bot', { size: 18, color: 'var(--color-primary)' })}
               <span>Language Control (Realtime)</span>
+              ${!isRealtime ? html`<span className="badge badge-draft" style="font-size: 10px;">Realtime Only</span>` : ''}
             </div>
             <span className="accordion-chevron">
               ${renderIcon('chevron-down', { size: 18 })}
@@ -661,25 +620,35 @@
 
           ${openSections.language ? html`
             <div className="accordion-content">
-              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
+              ${!isRealtime ? html`
+                <div style="background: #FFFBEB; border: 1px solid #FCD34D; border-radius: var(--radius-md); padding: 12px 14px; margin-bottom: 16px; display: flex; align-items: flex-start; gap: 10px;">
+                  ${renderIcon('alert-triangle', { size: 16, color: '#D97706' })}
+                  <div style="font-size: 13px; color: #92400E; line-height: 1.4;">
+                    <strong>Realtime Feature Only:</strong> Language Control is exclusive to the Realtime Voice architecture. Cascaded Voice manages recognized languages via the Speech-to-Text (STT) language list.
+                  </div>
+                </div>
+              ` : ''}
+
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; opacity: ${isRealtime ? 1 : 0.6};">
                 <div>
                   <div style="font-weight: 700; font-size: 14px;">Language Control</div>
-                  <div className="text-secondary" style="font-size: 13px;">Explains that the agent dynamically replies in the caller's language.</div>
+                  <div className="text-secondary" style="font-size: 13px;">Turn on to set primary and supported languages; the agent dynamically replies in the caller's language.</div>
                 </div>
                 <label className="toggle-switch">
                   <input 
                     type="checkbox" 
-                    checked=${agent.voiceSettings.language.control}
+                    disabled=${!isRealtime}
+                    checked=${isRealtime && agent.voiceSettings.language.control}
                     onChange=${(e) => updateVoice('language', 'control', e.target.checked)}
                   />
                   <span className="toggle-slider"></span>
                 </label>
               </div>
 
-              ${agent.voiceSettings.language.control ? html`
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+              ${isRealtime && agent.voiceSettings.language.control ? html`
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px;">
                   <div>
-                    <label className="form-label">Primary language</label>
+                    <label className="form-label required">Primary language</label>
                     <select 
                       className="form-select"
                       value=${agent.voiceSettings.language.primaryLanguage}
@@ -687,16 +656,56 @@
                     >
                       ${LANGUAGES.map(l => html`<option key=${l} value=${l}>${l}</option>`)}
                     </select>
+                    <div className="helper-text">Base language for greeting and default speech synthesis.</div>
                   </div>
+
                   <div>
                     <label className="form-label">Supported languages</label>
-                    <input 
-                      type="text" 
-                      className="form-input" 
-                      value=${agent.voiceSettings.language.supportedLanguages.join(', ')}
-                      disabled
-                      style="background: #F3F4F6;"
-                    />
+                    <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+                      <select 
+                        className="form-select" 
+                        style="font-size: 13px;"
+                        id="select-add-voice-language"
+                        onChange=${(e) => {
+                          const val = e.target.value;
+                          if (val) {
+                            const cur = agent.voiceSettings.language.supportedLanguages || [];
+                            if (!cur.includes(val)) {
+                              updateVoice('language', 'supportedLanguages', [...cur, val]);
+                            }
+                            e.target.value = '';
+                          }
+                        }}
+                      >
+                        <option value="">+ Add language from catalog...</option>
+                        ${LANGUAGES.filter(l => !(agent.voiceSettings.language.supportedLanguages || []).includes(l)).map(l => html`
+                          <option key=${l} value=${l}>${l}</option>
+                        `)}
+                      </select>
+                    </div>
+
+                    <!-- Interactive Editable Language Chips with Remove 'x' -->
+                    <div style="display: flex; flex-wrap: wrap; gap: 6px; min-height: 38px; padding: 6px; background: #F8FAFC; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+                      ${(agent.voiceSettings.language.supportedLanguages || []).map(lang => html`
+                        <span key=${lang} className="tag-chip" style="font-size: 12px; background: #FFFFFF; border: 1px solid #CBD5E1; padding: 3px 8px; border-radius: var(--radius-sm); display: inline-flex; align-items: center; gap: 6px;">
+                          <span>${lang}</span>
+                          <span 
+                            style="cursor: pointer; display: flex; align-items: center; color: var(--text-muted);"
+                            onClick=${() => {
+                              const cur = agent.voiceSettings.language.supportedLanguages || [];
+                              updateVoice('language', 'supportedLanguages', cur.filter(l => l !== lang));
+                            }}
+                            title="Remove language"
+                          >
+                            ${renderIcon('x', { size: 12 })}
+                          </span>
+                        </span>
+                      `)}
+                      ${(!agent.voiceSettings.language.supportedLanguages || agent.voiceSettings.language.supportedLanguages.length === 0) ? html`
+                        <span style="font-size: 12px; color: var(--text-muted); align-self: center; padding-left: 4px;">No additional supported languages selected.</span>
+                      ` : ''}
+                    </div>
+                    <div className="helper-text">Add or remove languages the agent dynamically understands on calls.</div>
                   </div>
                 </div>
               ` : ''}
