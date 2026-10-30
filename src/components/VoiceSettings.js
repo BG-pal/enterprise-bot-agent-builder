@@ -1,5 +1,6 @@
 // Screen 07: Voice Settings Component
 // Grouped accordions: Transcription (Alpha), Speech (STT/TTS tabs), Language, Barge-in, DTMF, Inactivity, Noise, Recording, Security
+// All 9 sections collapsed initially; clicking a header expands/collapses with smooth chevron rotation; multiple sections can be expanded simultaneously.
 
 (function (global) {
   function VoiceSettings() {
@@ -11,25 +12,10 @@
     const agent = state.currentAgent;
     if (!agent || !agent.channels.voice) return '';
 
-    // Local accordion collapse states
-    const [openSections, setOpenSections] = React.useState({
-      transcription: false,
-      speech: true,
-      language: false,
-      bargeIn: true,
-      dtmf: false,
-      inactivity: false,
-      noise: false,
-      recording: false,
-      security: true
-    });
-
-    const [domainInput, setDomainInput] = React.useState('');
-    const [sttLangInput, setSttLangInput] = React.useState('');
-
-    function toggleAccordion(key) {
-      setOpenSections(prev => ({ ...prev, [key]: !prev[key] }));
-    }
+    // Accordion expansion states stored centrally in AppState (all false/collapsed initially)
+    const openSections = state.voiceSettingsUi?.openSections || {};
+    const domainInput = state.voiceSettingsUi?.domainInput || '';
+    const sttLangInput = state.voiceSettingsUi?.sttLangInput || '';
 
     function updateVoice(section, key, val) {
       actions.updateCurrentAgent({
@@ -38,53 +24,6 @@
           [section]: {
             ...agent.voiceSettings[section],
             [key]: val
-          }
-        }
-      });
-    }
-
-    function addDomain() {
-      const val = domainInput.trim();
-      if (val && !agent.voiceSettings.security.allowedDomains.includes(val)) {
-        updateVoice('security', 'allowedDomains', [...agent.voiceSettings.security.allowedDomains, val]);
-        setDomainInput('');
-      }
-    }
-
-    function removeDomain(dom) {
-      updateVoice('security', 'allowedDomains', agent.voiceSettings.security.allowedDomains.filter(d => d !== dom));
-    }
-
-    function addSttLanguage() {
-      const val = sttLangInput.trim();
-      if (val && !agent.voiceSettings.speech.stt.languages.includes(val)) {
-        const next = [...agent.voiceSettings.speech.stt.languages, val];
-        actions.updateCurrentAgent({
-          voiceSettings: {
-            ...agent.voiceSettings,
-            speech: {
-              ...agent.voiceSettings.speech,
-              stt: {
-                ...agent.voiceSettings.speech.stt,
-                languages: next
-              }
-            }
-          }
-        });
-        setSttLangInput('');
-      }
-    }
-
-    function removeSttLanguage(code) {
-      actions.updateCurrentAgent({
-        voiceSettings: {
-          ...agent.voiceSettings,
-          speech: {
-            ...agent.voiceSettings.speech,
-            stt: {
-              ...agent.voiceSettings.speech.stt,
-              languages: agent.voiceSettings.speech.stt.languages.filter(l => l !== code)
-            }
           }
         }
       });
@@ -100,14 +39,20 @@
         </div>
 
         <!-- ================= ACCORDION A: TRANSCRIPTION (ALPHA) ================= -->
-        <div className="accordion">
-          <div className="accordion-header" onClick=${() => toggleAccordion('transcription')}>
+        <div className="accordion ${openSections.transcription ? 'is-open' : ''}">
+          <div 
+            className="accordion-header" 
+            onClick=${() => actions.toggleVoiceAccordion('transcription')}
+            id="accordion-header-transcription"
+          >
             <div className="accordion-title">
               ${renderIcon('mic', { size: 18, color: 'var(--color-primary)' })}
               <span>Transcription Settings</span>
               <span className="badge badge-alpha">Alpha Feature</span>
             </div>
-            ${renderIcon(openSections.transcription ? 'chevron-up' : 'chevron-down', { size: 18, color: 'var(--text-muted)' })}
+            <span className="accordion-chevron">
+              ${renderIcon('chevron-down', { size: 18 })}
+            </span>
           </div>
 
           ${openSections.transcription ? html`
@@ -160,14 +105,20 @@
         </div>
 
         <!-- ================= ACCORDION B: SPEECH (STT / TTS TABS) ================= -->
-        <div className="accordion">
-          <div className="accordion-header" onClick=${() => toggleAccordion('speech')}>
+        <div className="accordion ${openSections.speech ? 'is-open' : ''}">
+          <div 
+            className="accordion-header" 
+            onClick=${() => actions.toggleVoiceAccordion('speech')}
+            id="accordion-header-speech"
+          >
             <div className="accordion-title">
               ${renderIcon('volume-2', { size: 18, color: 'var(--color-primary)' })}
               <span>Speech Recognition & Synthesis</span>
               <span className="badge badge-published">Core Engine</span>
             </div>
-            ${renderIcon(openSections.speech ? 'chevron-up' : 'chevron-down', { size: 18, color: 'var(--text-muted)' })}
+            <span className="accordion-chevron">
+              ${renderIcon('chevron-down', { size: 18 })}
+            </span>
           </div>
 
           ${openSections.speech ? html`
@@ -182,6 +133,7 @@
                       speech: { ...agent.voiceSettings.speech, activeTab: 'stt' }
                     }
                   })}
+                  style="cursor: pointer;"
                 >
                   Speech-to-Text (STT)
                 </div>
@@ -193,6 +145,7 @@
                       speech: { ...agent.voiceSettings.speech, activeTab: 'tts' }
                     }
                   })}
+                  style="cursor: pointer;"
                 >
                   Text-to-Speech (TTS)
                 </div>
@@ -252,21 +205,33 @@
                         className="form-input" 
                         placeholder="e.g. fr-FR and press Enter..."
                         value=${sttLangInput}
-                        onInput=${(e) => setSttLangInput(e.target.value)}
+                        onInput=${(e) => actions.setVoiceSttLangInput(e.target.value)}
                         onKeyDown=${(e) => {
                           if (e.key === 'Enter') {
                             e.preventDefault();
-                            addSttLanguage();
+                            actions.addVoiceSttLanguage();
                           }
                         }}
                       />
-                      <button className="btn btn-secondary" onClick=${addSttLanguage}>Add</button>
+                      <button 
+                        type="button"
+                        className="btn btn-secondary" 
+                        onClick=${() => actions.addVoiceSttLanguage()}
+                      >
+                        Add
+                      </button>
                     </div>
                     <div style="display: flex; flex-wrap: wrap; gap: 8px;">
                       ${agent.voiceSettings.speech.stt.languages.map(code => html`
                         <span key=${code} className="tag-chip">
                           <span>${code}</span>
-                          <span className="remove-btn" onClick=${() => removeSttLanguage(code)}>${renderIcon('x', { size: 12 })}</span>
+                          <span 
+                            className="remove-btn" 
+                            onClick=${() => actions.removeVoiceSttLanguage(code)}
+                            title="Remove language"
+                          >
+                            ${renderIcon('x', { size: 12 })}
+                          </span>
                         </span>
                       `)}
                     </div>
@@ -354,15 +319,15 @@
                           }
                         })}
                       />
-                      <div className="helper-text">Single language recommended.</div>
+                      <div className="helper-text">Leave blank to use base foundation model.</div>
                     </div>
                   </div>
 
-                  <!-- Reply in detected language toggle -->
-                  <div style="display: flex; align-items: center; justify-content: space-between; padding-top: 12px; border-top: 1px solid var(--border-color);">
+                  <!-- Reply in detected language -->
+                  <div style="display: flex; align-items: center; justify-content: space-between; padding-top: 14px; border-top: 1px solid var(--border-color);">
                     <div>
                       <div style="font-weight: 700; font-size: 14px;">Reply in detected language</div>
-                      <div className="text-secondary" style="font-size: 13px;">TTS speaks in the language dynamically detected by STT.</div>
+                      <div className="text-secondary" style="font-size: 13px;">TTS dynamically speaks the language detected by STT on each turn.</div>
                     </div>
                     <label className="toggle-switch">
                       <input 
@@ -387,126 +352,164 @@
               <!-- TTS TAB -->
               ${agent.voiceSettings.speech.activeTab === 'tts' ? html`
                 <div>
-                  <div className="form-group">
-                    <label className="form-label required">Speech Service (TTS)</label>
-                    <select 
-                      className="form-select"
-                      value=${agent.voiceSettings.speech.tts.provider}
-                      onChange=${(e) => actions.updateCurrentAgent({
-                        voiceSettings: {
-                          ...agent.voiceSettings,
-                          speech: {
-                            ...agent.voiceSettings.speech,
-                            tts: { ...agent.voiceSettings.speech.tts, provider: e.target.value }
+                  <div style="margin-bottom: 20px;">
+                    <label className="form-label required">Select TTS Provider</label>
+                    <div style="display: flex; gap: 12px;">
+                      <div 
+                        className="selection-card ${agent.voiceSettings.speech.tts.provider === 'Azure' ? 'selected' : ''}"
+                        onClick=${() => actions.updateCurrentAgent({
+                          voiceSettings: {
+                            ...agent.voiceSettings,
+                            speech: {
+                              ...agent.voiceSettings.speech,
+                              tts: { ...agent.voiceSettings.speech.tts, provider: 'Azure' }
+                            }
                           }
-                        }
-                      })}
-                    >
-                      ${TTS_PROVIDERS.map(p => html`<option key=${p} value=${p}>${p}</option>`)}
-                    </select>
+                        })}
+                        style="flex: 1; padding: 14px; cursor: pointer;"
+                      >
+                        <div style="font-weight: 700; font-size: 14px;">Azure Speech Services</div>
+                        <div className="text-secondary" style="font-size: 12px; margin-top: 4px;">Neural voices with rich SSML styles and multi-lingual expressiveness.</div>
+                      </div>
+
+                      <div 
+                        className="selection-card ${agent.voiceSettings.speech.tts.provider === 'ElevenLabs' ? 'selected' : ''}"
+                        onClick=${() => actions.updateCurrentAgent({
+                          voiceSettings: {
+                            ...agent.voiceSettings,
+                            speech: {
+                              ...agent.voiceSettings.speech,
+                              tts: { ...agent.voiceSettings.speech.tts, provider: 'ElevenLabs' }
+                            }
+                          }
+                        })}
+                        style="flex: 1; padding: 14px; cursor: pointer;"
+                      >
+                        <div style="font-weight: 700; font-size: 14px;">ElevenLabs Turbo</div>
+                        <div className="text-secondary" style="font-size: 12px; margin-top: 4px;">Ultra low-latency hyper-realistic streaming speech synthesis.</div>
+                      </div>
+                    </div>
                   </div>
 
-                  <!-- Azure Provider Fields -->
-                  ${agent.voiceSettings.speech.tts.provider.includes('Azure') ? html`
-                    <div style="background: #F8FAFC; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 16px;">
-                      <div style="font-weight: 700; font-size: 14px; margin-bottom: 12px; color: var(--text-primary);">
-                        Azure Neural TTS Controls
-                      </div>
-                      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 14px;">
+                  <!-- Azure Specific TTS Controls -->
+                  ${agent.voiceSettings.speech.tts.provider === 'Azure' ? html`
+                    <div style="background: #F8FAFC; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 18px; margin-bottom: 16px;">
+                      <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 14px; color: var(--text-primary);">Azure TTS Voice & Prosody</h4>
+                      
+                      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
                         <div>
-                          <label className="form-label">Speed</label>
-                          <input 
-                            type="number" 
-                            step="0.05"
-                            className="form-input" 
-                            value=${agent.voiceSettings.speech.tts.azureSpeed}
-                            onInput=${(e) => actions.updateCurrentAgent({
+                          <label className="form-label">Voice (TTS)</label>
+                          <select 
+                            className="form-select"
+                            value=${agent.voiceSettings.speech.tts.azure.voice}
+                            onChange=${(e) => actions.updateCurrentAgent({
                               voiceSettings: {
                                 ...agent.voiceSettings,
                                 speech: {
                                   ...agent.voiceSettings.speech,
-                                  tts: { ...agent.voiceSettings.speech.tts, azureSpeed: parseFloat(e.target.value) || 1.0 }
+                                  tts: {
+                                    ...agent.voiceSettings.speech.tts,
+                                    azure: { ...agent.voiceSettings.speech.tts.azure, voice: e.target.value }
+                                  }
                                 }
                               }
                             })}
-                          />
-                          <div className="helper-text">Default 1.1</div>
+                          >
+                            <option value="en-US-JennyNeural">en-US-JennyNeural (Warm & Friendly)</option>
+                            <option value="en-US-GuyNeural">en-US-GuyNeural (Professional & Direct)</option>
+                            <option value="en-US-AriaNeural">en-US-AriaNeural (Clear & Confident)</option>
+                            <option value="de-DE-KatjaNeural">de-DE-KatjaNeural (German Natural)</option>
+                          </select>
                         </div>
 
-                        <div>
-                          <label className="form-label">Pitch</label>
-                          <input 
-                            type="text" 
-                            className="form-input" 
-                            value=${agent.voiceSettings.speech.tts.azurePitch}
-                            onInput=${(e) => actions.updateCurrentAgent({
-                              voiceSettings: {
-                                ...agent.voiceSettings,
-                                speech: {
-                                  ...agent.voiceSettings.speech,
-                                  tts: { ...agent.voiceSettings.speech.tts, azurePitch: e.target.value }
-                                }
-                              }
-                            })}
-                          />
-                          <div className="helper-text">Default</div>
-                        </div>
-
-                        <div>
-                          <label className="form-label">Volume</label>
-                          <input 
-                            type="text" 
-                            className="form-input" 
-                            value=${agent.voiceSettings.speech.tts.azureVolume}
-                            onInput=${(e) => actions.updateCurrentAgent({
-                              voiceSettings: {
-                                ...agent.voiceSettings,
-                                speech: {
-                                  ...agent.voiceSettings.speech,
-                                  tts: { ...agent.voiceSettings.speech.tts, azureVolume: e.target.value }
-                                }
-                              }
-                            })}
-                          />
-                          <div className="helper-text">Default</div>
-                        </div>
-                      </div>
-
-                      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
                         <div>
                           <label className="form-label">Speaking Style</label>
+                          <select 
+                            className="form-select"
+                            value=${agent.voiceSettings.speech.tts.azure.style}
+                            onChange=${(e) => actions.updateCurrentAgent({
+                              voiceSettings: {
+                                ...agent.voiceSettings,
+                                speech: {
+                                  ...agent.voiceSettings.speech,
+                                  tts: {
+                                    ...agent.voiceSettings.speech.tts,
+                                    azure: { ...agent.voiceSettings.speech.tts.azure, style: e.target.value }
+                                  }
+                                }
+                              }
+                            })}
+                          >
+                            <option value="neutral">Neutral (Default)</option>
+                            <option value="empathetic">Empathetic / Customer Support</option>
+                            <option value="cheerful">Cheerful</option>
+                            <option value="chat">Chat / Conversational</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 14px;">
+                        <div>
+                          <label className="form-label">Speed: ${agent.voiceSettings.speech.tts.azure.speed}x</label>
                           <input 
-                            type="text" 
-                            className="form-input" 
-                            value=${agent.voiceSettings.speech.tts.azureStyle}
+                            type="range" min="0.8" max="1.5" step="0.05"
+                            className="form-range"
+                            value=${agent.voiceSettings.speech.tts.azure.speed}
                             onInput=${(e) => actions.updateCurrentAgent({
                               voiceSettings: {
                                 ...agent.voiceSettings,
                                 speech: {
                                   ...agent.voiceSettings.speech,
-                                  tts: { ...agent.voiceSettings.speech.tts, azureStyle: e.target.value }
+                                  tts: {
+                                    ...agent.voiceSettings.speech.tts,
+                                    azure: { ...agent.voiceSettings.speech.tts.azure, speed: parseFloat(e.target.value) }
+                                  }
                                 }
                               }
                             })}
                           />
-                          <div className="helper-text">Default: Neutral</div>
+                          <div className="helper-text">Default: 1.1x</div>
                         </div>
 
                         <div>
-                          <label className="form-label">Style Degree</label>
+                          <label className="form-label">Pitch: ${agent.voiceSettings.speech.tts.azure.pitch}</label>
+                          <select 
+                            className="form-select"
+                            value=${agent.voiceSettings.speech.tts.azure.pitch}
+                            onChange=${(e) => actions.updateCurrentAgent({
+                              voiceSettings: {
+                                ...agent.voiceSettings,
+                                speech: {
+                                  ...agent.voiceSettings.speech,
+                                  tts: {
+                                    ...agent.voiceSettings.speech.tts,
+                                    azure: { ...agent.voiceSettings.speech.tts.azure, pitch: e.target.value }
+                                  }
+                                }
+                              }
+                            })}
+                          >
+                            <option value="default">Default</option>
+                            <option value="low">Low (-5%)</option>
+                            <option value="high">High (+5%)</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="form-label">Style Degree: ${agent.voiceSettings.speech.tts.azure.styleDegree}</label>
                           <input 
-                            type="number" 
-                            step="0.1" 
-                            min="0.1" 
-                            max="2.0"
-                            className="form-input" 
-                            value=${agent.voiceSettings.speech.tts.azureStyleDegree}
+                            type="range" min="0.5" max="2.0" step="0.1"
+                            className="form-range"
+                            value=${agent.voiceSettings.speech.tts.azure.styleDegree}
                             onInput=${(e) => actions.updateCurrentAgent({
                               voiceSettings: {
                                 ...agent.voiceSettings,
                                 speech: {
                                   ...agent.voiceSettings.speech,
-                                  tts: { ...agent.voiceSettings.speech.tts, azureStyleDegree: parseFloat(e.target.value) || 1.0 }
+                                  tts: {
+                                    ...agent.voiceSettings.speech.tts,
+                                    azure: { ...agent.voiceSettings.speech.tts.azure, styleDegree: parseFloat(e.target.value) }
+                                  }
                                 }
                               }
                             })}
@@ -517,29 +520,34 @@
                     </div>
                   ` : ''}
 
-                  <!-- ElevenLabs Provider Fields -->
-                  ${agent.voiceSettings.speech.tts.provider.includes('ElevenLabs') ? html`
-                    <div style="background: #F8FAFC; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 16px;">
-                      <div style="font-weight: 700; font-size: 14px; margin-bottom: 12px; color: var(--text-primary);">
-                        ElevenLabs Custom Voice Parameters
-                      </div>
-                      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;">
+                  <!-- ElevenLabs Specific TTS Controls -->
+                  ${agent.voiceSettings.speech.tts.provider === 'ElevenLabs' ? html`
+                    <div style="background: #F8FAFC; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 18px; margin-bottom: 16px;">
+                      <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 14px; color: var(--text-primary);">ElevenLabs Turbo Parameters</h4>
+                      
+                      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
                         <div>
-                          <label className="form-label required">Voice ID</label>
-                          <input 
-                            type="text" 
-                            className="form-input" 
-                            value=${agent.voiceSettings.speech.tts.elevenLabsVoiceId}
-                            onInput=${(e) => actions.updateCurrentAgent({
+                          <label className="form-label">Voice ID</label>
+                          <select 
+                            className="form-select"
+                            value=${agent.voiceSettings.speech.tts.elevenLabs.voiceId}
+                            onChange=${(e) => actions.updateCurrentAgent({
                               voiceSettings: {
                                 ...agent.voiceSettings,
                                 speech: {
                                   ...agent.voiceSettings.speech,
-                                  tts: { ...agent.voiceSettings.speech.tts, elevenLabsVoiceId: e.target.value }
+                                  tts: {
+                                    ...agent.voiceSettings.speech.tts,
+                                    elevenLabs: { ...agent.voiceSettings.speech.tts.elevenLabs, voiceId: e.target.value }
+                                  }
                                 }
                               }
                             })}
-                          />
+                          >
+                            <option value="eleven_flash_v2_5">eleven_flash_v2_5 (Lowest Latency)</option>
+                            <option value="rachel_calm_support">rachel_calm_support (Support Agent)</option>
+                            <option value="josh_direct">josh_direct (Claims Adjuster)</option>
+                          </select>
                         </div>
 
                         <div>
@@ -547,66 +555,108 @@
                           <input 
                             type="text" 
                             className="form-input" 
-                            value=${agent.voiceSettings.speech.tts.elevenLabsModel}
-                            disabled
+                            disabled 
+                            value=${agent.voiceSettings.speech.tts.elevenLabs.model} 
+                            style="background: #F3F4F6;"
                           />
-                          <div className="helper-text">eleven_flash_v2_5</div>
                         </div>
                       </div>
 
-                      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+                      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
                         <div>
-                          <label className="form-label">Stability: ${agent.voiceSettings.speech.tts.elevenLabsStability}</label>
+                          <label className="form-label">Stability: ${agent.voiceSettings.speech.tts.elevenLabs.stability}</label>
                           <input 
                             type="range" min="0" max="1" step="0.05"
-                            value=${agent.voiceSettings.speech.tts.elevenLabsStability}
-                            style="width: 100%; accent-color: var(--color-primary);"
+                            className="form-range"
+                            value=${agent.voiceSettings.speech.tts.elevenLabs.stability}
                             onInput=${(e) => actions.updateCurrentAgent({
                               voiceSettings: {
                                 ...agent.voiceSettings,
                                 speech: {
                                   ...agent.voiceSettings.speech,
-                                  tts: { ...agent.voiceSettings.speech.tts, elevenLabsStability: parseFloat(e.target.value) }
+                                  tts: {
+                                    ...agent.voiceSettings.speech.tts,
+                                    elevenLabs: { ...agent.voiceSettings.speech.tts.elevenLabs, stability: parseFloat(e.target.value) }
+                                  }
                                 }
                               }
                             })}
                           />
+                          <div className="helper-text">Default: 0.5</div>
                         </div>
 
                         <div>
-                          <label className="form-label">Similarity: ${agent.voiceSettings.speech.tts.elevenLabsSimilarity}</label>
+                          <label className="form-label">Similarity: ${agent.voiceSettings.speech.tts.elevenLabs.similarity}</label>
                           <input 
                             type="range" min="0" max="1" step="0.05"
-                            value=${agent.voiceSettings.speech.tts.elevenLabsSimilarity}
-                            style="width: 100%; accent-color: var(--color-primary);"
+                            className="form-range"
+                            value=${agent.voiceSettings.speech.tts.elevenLabs.similarity}
                             onInput=${(e) => actions.updateCurrentAgent({
                               voiceSettings: {
                                 ...agent.voiceSettings,
                                 speech: {
                                   ...agent.voiceSettings.speech,
-                                  tts: { ...agent.voiceSettings.speech.tts, elevenLabsSimilarity: parseFloat(e.target.value) }
+                                  tts: {
+                                    ...agent.voiceSettings.speech.tts,
+                                    elevenLabs: { ...agent.voiceSettings.speech.tts.elevenLabs, similarity: parseFloat(e.target.value) }
+                                  }
                                 }
                               }
                             })}
                           />
+                          <div className="helper-text">Default: 0.75</div>
                         </div>
+                      </div>
+
+                      <div style="display: flex; align-items: center; justify-content: space-between; padding-top: 10px; border-top: 1px solid var(--border-color);">
+                        <div>
+                          <div style="font-weight: 700; font-size: 13px;">Speaker Boost</div>
+                          <div className="text-secondary" style="font-size: 12px;">Boosts voice likeness and volume clarity on phone calls.</div>
+                        </div>
+                        <label className="toggle-switch">
+                          <input 
+                            type="checkbox" 
+                            checked=${agent.voiceSettings.speech.tts.elevenLabs.speakerBoost}
+                            onChange=${(e) => actions.updateCurrentAgent({
+                              voiceSettings: {
+                                ...agent.voiceSettings,
+                                speech: {
+                                  ...agent.voiceSettings.speech,
+                                  tts: {
+                                    ...agent.voiceSettings.speech.tts,
+                                    elevenLabs: { ...agent.voiceSettings.speech.tts.elevenLabs, speakerBoost: e.target.checked }
+                                  }
+                                }
+                              }
+                            })}
+                          />
+                          <span className="toggle-slider"></span>
+                        </label>
                       </div>
                     </div>
                   ` : ''}
+
                 </div>
               ` : ''}
+
             </div>
           ` : ''}
         </div>
 
         <!-- ================= ACCORDION C: LANGUAGE (REALTIME) ================= -->
-        <div className="accordion">
-          <div className="accordion-header" onClick=${() => toggleAccordion('language')}>
+        <div className="accordion ${openSections.language ? 'is-open' : ''}">
+          <div 
+            className="accordion-header" 
+            onClick=${() => actions.toggleVoiceAccordion('language')}
+            id="accordion-header-language"
+          >
             <div className="accordion-title">
               ${renderIcon('bot', { size: 18, color: 'var(--color-primary)' })}
               <span>Language Control (Realtime)</span>
             </div>
-            ${renderIcon(openSections.language ? 'chevron-up' : 'chevron-down', { size: 18, color: 'var(--text-muted)' })}
+            <span className="accordion-chevron">
+              ${renderIcon('chevron-down', { size: 18 })}
+            </span>
           </div>
 
           ${openSections.language ? html`
@@ -655,13 +705,19 @@
         </div>
 
         <!-- ================= ACCORDION D: BARGE-IN ================= -->
-        <div className="accordion">
-          <div className="accordion-header" onClick=${() => toggleAccordion('bargeIn')}>
+        <div className="accordion ${openSections.bargeIn ? 'is-open' : ''}">
+          <div 
+            className="accordion-header" 
+            onClick=${() => actions.toggleVoiceAccordion('bargeIn')}
+            id="accordion-header-bargeIn"
+          >
             <div className="accordion-title">
               ${renderIcon('mic-off', { size: 18, color: 'var(--color-primary)' })}
               <span>Barge-in (Caller Interruption)</span>
             </div>
-            ${renderIcon(openSections.bargeIn ? 'chevron-up' : 'chevron-down', { size: 18, color: 'var(--text-muted)' })}
+            <span className="accordion-chevron">
+              ${renderIcon('chevron-down', { size: 18 })}
+            </span>
           </div>
 
           ${openSections.bargeIn ? html`
@@ -706,13 +762,19 @@
         </div>
 
         <!-- ================= ACCORDION E: DTMF (KEYPAD) ================= -->
-        <div className="accordion">
-          <div className="accordion-header" onClick=${() => toggleAccordion('dtmf')}>
+        <div className="accordion ${openSections.dtmf ? 'is-open' : ''}">
+          <div 
+            className="accordion-header" 
+            onClick=${() => actions.toggleVoiceAccordion('dtmf')}
+            id="accordion-header-dtmf"
+          >
             <div className="accordion-title">
               ${renderIcon('hash', { size: 18, color: 'var(--color-primary)' })}
               <span>DTMF Keypad Settings</span>
             </div>
-            ${renderIcon(openSections.dtmf ? 'chevron-up' : 'chevron-down', { size: 18, color: 'var(--text-muted)' })}
+            <span className="accordion-chevron">
+              ${renderIcon('chevron-down', { size: 18 })}
+            </span>
           </div>
 
           ${openSections.dtmf ? html`
@@ -780,13 +842,19 @@
         </div>
 
         <!-- ================= ACCORDION F: INACTIVITY ================= -->
-        <div className="accordion">
-          <div className="accordion-header" onClick=${() => toggleAccordion('inactivity')}>
+        <div className="accordion ${openSections.inactivity ? 'is-open' : ''}">
+          <div 
+            className="accordion-header" 
+            onClick=${() => actions.toggleVoiceAccordion('inactivity')}
+            id="accordion-header-inactivity"
+          >
             <div className="accordion-title">
               ${renderIcon('clock', { size: 18, color: 'var(--color-primary)' })}
               <span>Inactivity Handling</span>
             </div>
-            ${renderIcon(openSections.inactivity ? 'chevron-up' : 'chevron-down', { size: 18, color: 'var(--text-muted)' })}
+            <span className="accordion-chevron">
+              ${renderIcon('chevron-down', { size: 18 })}
+            </span>
           </div>
 
           ${openSections.inactivity ? html`
@@ -887,13 +955,19 @@
         </div>
 
         <!-- ================= ACCORDION G: NOISE CANCELLATION ================= -->
-        <div className="accordion">
-          <div className="accordion-header" onClick=${() => toggleAccordion('noise')}>
+        <div className="accordion ${openSections.noise ? 'is-open' : ''}">
+          <div 
+            className="accordion-header" 
+            onClick=${() => actions.toggleVoiceAccordion('noise')}
+            id="accordion-header-noise"
+          >
             <div className="accordion-title">
               ${renderIcon('shield', { size: 18, color: 'var(--color-primary)' })}
               <span>Noise Cancellation</span>
             </div>
-            ${renderIcon(openSections.noise ? 'chevron-up' : 'chevron-down', { size: 18, color: 'var(--text-muted)' })}
+            <span className="accordion-chevron">
+              ${renderIcon('chevron-down', { size: 18 })}
+            </span>
           </div>
 
           ${openSections.noise ? html`
@@ -949,13 +1023,19 @@
         </div>
 
         <!-- ================= ACCORDION H: RECORDING ================= -->
-        <div className="accordion">
-          <div className="accordion-header" onClick=${() => toggleAccordion('recording')}>
+        <div className="accordion ${openSections.recording ? 'is-open' : ''}">
+          <div 
+            className="accordion-header" 
+            onClick=${() => actions.toggleVoiceAccordion('recording')}
+            id="accordion-header-recording"
+          >
             <div className="accordion-title">
               ${renderIcon('play', { size: 18, color: 'var(--color-primary)' })}
               <span>Call Recording</span>
             </div>
-            ${renderIcon(openSections.recording ? 'chevron-up' : 'chevron-down', { size: 18, color: 'var(--text-muted)' })}
+            <span className="accordion-chevron">
+              ${renderIcon('chevron-down', { size: 18 })}
+            </span>
           </div>
 
           ${openSections.recording ? html`
@@ -979,14 +1059,20 @@
         </div>
 
         <!-- ================= ACCORDION I: SECURITY & RETENTION ================= -->
-        <div className="accordion">
-          <div className="accordion-header" onClick=${() => toggleAccordion('security')}>
+        <div className="accordion ${openSections.security ? 'is-open' : ''}">
+          <div 
+            className="accordion-header" 
+            onClick=${() => actions.toggleVoiceAccordion('security')}
+            id="accordion-header-security"
+          >
             <div className="accordion-title">
               ${renderIcon('shield', { size: 18, color: 'var(--color-primary)' })}
               <span>Security, PII & Data Retention</span>
               <span className="badge badge-published">Strict Compliance</span>
             </div>
-            ${renderIcon(openSections.security ? 'chevron-up' : 'chevron-down', { size: 18, color: 'var(--text-muted)' })}
+            <span className="accordion-chevron">
+              ${renderIcon('chevron-down', { size: 18 })}
+            </span>
           </div>
 
           ${openSections.security ? html`
@@ -1044,15 +1130,21 @@
                     className="form-input" 
                     placeholder="e.g. voice.acme.com and press Enter..."
                     value=${domainInput}
-                    onInput=${(e) => setDomainInput(e.target.value)}
+                    onInput=${(e) => actions.setVoiceDomainInput(e.target.value)}
                     onKeyDown=${(e) => {
                       if (e.key === 'Enter') {
                         e.preventDefault();
-                        addDomain();
+                        actions.addVoiceDomain();
                       }
                     }}
                   />
-                  <button className="btn btn-secondary" onClick=${addDomain}>Add Domain</button>
+                  <button 
+                    type="button"
+                    className="btn btn-secondary" 
+                    onClick=${() => actions.addVoiceDomain()}
+                  >
+                    Add Domain
+                  </button>
                 </div>
 
                 <div style="display: flex; flex-wrap: wrap; gap: 8px;">
@@ -1060,7 +1152,13 @@
                     <span key=${dom} className="tag-chip">
                       ${renderIcon('shield', { size: 12, color: 'var(--color-primary)' })}
                       <span>${dom}</span>
-                      <span className="remove-btn" onClick=${() => removeDomain(dom)}>${renderIcon('x', { size: 12 })}</span>
+                      <span 
+                        className="remove-btn" 
+                        onClick=${() => actions.removeVoiceDomain(dom)}
+                        title="Remove domain"
+                      >
+                        ${renderIcon('x', { size: 12 })}
+                      </span>
                     </span>
                   `)}
                 </div>

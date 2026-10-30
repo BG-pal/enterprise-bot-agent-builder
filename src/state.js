@@ -75,6 +75,23 @@
       emailThread: [],
       expandedDetails: {}
     },
+
+    // Voice Settings Accordions & inputs (all collapsed initially)
+    voiceSettingsUi: {
+      openSections: {
+        transcription: false,
+        speech: false,
+        language: false,
+        bargeIn: false,
+        dtmf: false,
+        inactivity: false,
+        noise: false,
+        recording: false,
+        security: false
+      },
+      domainInput: '',
+      sttLangInput: ''
+    },
     
     // Publish modal
     publishModalOpen: false,
@@ -523,6 +540,73 @@
       state.tryIt.expandedDetails = {};
       addToast('Started a fresh email testing thread.', 'info');
       notify();
+    },
+
+    toggleVoiceAccordion(sectionKey) {
+      if (!state.voiceSettingsUi) {
+        state.voiceSettingsUi = { openSections: {} };
+      }
+      if (!state.voiceSettingsUi.openSections) {
+        state.voiceSettingsUi.openSections = {};
+      }
+      state.voiceSettingsUi.openSections[sectionKey] = !state.voiceSettingsUi.openSections[sectionKey];
+      notify();
+    },
+
+    setVoiceDomainInput(val) {
+      if (!state.voiceSettingsUi) state.voiceSettingsUi = { openSections: {} };
+      state.voiceSettingsUi.domainInput = val;
+      notify();
+    },
+
+    setVoiceSttLangInput(val) {
+      if (!state.voiceSettingsUi) state.voiceSettingsUi = { openSections: {} };
+      state.voiceSettingsUi.sttLangInput = val;
+      notify();
+    },
+
+    addVoiceDomain() {
+      if (!state.voiceSettingsUi) state.voiceSettingsUi = { openSections: {} };
+      const val = state.voiceSettingsUi.domainInput?.trim();
+      if (val && state.currentAgent) {
+        const currentDomains = state.currentAgent.voiceSettings.security.allowedDomains || [];
+        if (!currentDomains.includes(val)) {
+          state.currentAgent.voiceSettings.security.allowedDomains = [...currentDomains, val];
+          state.hasUnsavedChanges = true;
+          state.voiceSettingsUi.domainInput = '';
+          notify();
+        }
+      }
+    },
+
+    removeVoiceDomain(dom) {
+      if (state.currentAgent) {
+        state.currentAgent.voiceSettings.security.allowedDomains = (state.currentAgent.voiceSettings.security.allowedDomains || []).filter(d => d !== dom);
+        state.hasUnsavedChanges = true;
+        notify();
+      }
+    },
+
+    addVoiceSttLanguage() {
+      if (!state.voiceSettingsUi) state.voiceSettingsUi = { openSections: {} };
+      const val = state.voiceSettingsUi.sttLangInput?.trim();
+      if (val && state.currentAgent) {
+        const currentLangs = state.currentAgent.voiceSettings.speech.stt.languages || [];
+        if (!currentLangs.includes(val)) {
+          state.currentAgent.voiceSettings.speech.stt.languages = [...currentLangs, val];
+          state.hasUnsavedChanges = true;
+          state.voiceSettingsUi.sttLangInput = '';
+          notify();
+        }
+      }
+    },
+
+    removeVoiceSttLanguage(code) {
+      if (state.currentAgent) {
+        state.currentAgent.voiceSettings.speech.stt.languages = (state.currentAgent.voiceSettings.speech.stt.languages || []).filter(c => c !== code);
+        state.hasUnsavedChanges = true;
+        notify();
+      }
     },
 
     addToast
