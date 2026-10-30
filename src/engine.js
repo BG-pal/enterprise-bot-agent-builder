@@ -257,13 +257,27 @@
   }
 
   // --- React Component State Lifecycle & Hooks ---
+  const componentHookStores = new Map();
+  let currentComponentKey = 'app';
   let currentComponent = null;
   let hookIndex = 0;
 
+  function getComponentStore(key) {
+    if (!componentHookStores.has(key)) {
+      componentHookStores.set(key, { hooks: [], effects: [] });
+    }
+    return componentHookStores.get(key);
+  }
+
+  function setHookContext(key) {
+    currentComponentKey = key || 'app';
+    currentComponent = getComponentStore(currentComponentKey);
+    hookIndex = 0;
+  }
+
   function useState(initial) {
     if (!currentComponent) {
-      let val = typeof initial === 'function' ? initial() : initial;
-      return [val, () => {}];
+      setHookContext('app');
     }
     const comp = currentComponent;
     const idx = hookIndex++;
@@ -281,7 +295,9 @@
   }
 
   function useEffect(callback, deps) {
-    if (!currentComponent) return;
+    if (!currentComponent) {
+      setHookContext('app');
+    }
     const comp = currentComponent;
     const idx = hookIndex++;
     const prev = comp.hooks[idx];
@@ -296,7 +312,9 @@
   }
 
   function useRef(initial) {
-    if (!currentComponent) return { current: initial };
+    if (!currentComponent) {
+      setHookContext('app');
+    }
     const comp = currentComponent;
     const idx = hookIndex++;
     if (!comp.hooks[idx]) {
@@ -310,11 +328,6 @@
   let rootComponentFn = null;
   let isRenderPending = false;
 
-  const appInstance = {
-    hooks: [],
-    effects: []
-  };
-
   function scheduleRender() {
     if (isRenderPending) return;
     isRenderPending = true;
@@ -326,9 +339,7 @@
 
   function renderApp() {
     if (!rootContainer || !rootComponentFn) return;
-    currentComponent = appInstance;
-    hookIndex = 0;
-    appInstance.effects = [];
+    setHookContext('app');
 
     const vdom = rootComponentFn();
     currentComponent = null;
@@ -343,17 +354,20 @@
       rootContainer.appendChild(createDomNode(vdom));
     }
 
-    // Run effects
-    for (let eff of appInstance.effects) {
-      if (typeof eff.cleanup === 'function') {
-        try { eff.cleanup(); } catch (e) { console.error(e); }
+    // Run effects across all stores
+    for (let store of componentHookStores.values()) {
+      for (let eff of store.effects) {
+        if (typeof eff.cleanup === 'function') {
+          try { eff.cleanup(); } catch (e) { console.error(e); }
+        }
+        try {
+          const clean = eff.callback();
+          if (typeof clean === 'function') eff.cleanup = clean;
+        } catch (e) {
+          console.error(e);
+        }
       }
-      try {
-        const clean = eff.callback();
-        if (typeof clean === 'function') eff.cleanup = clean;
-      } catch (e) {
-        console.error(e);
-      }
+      store.effects = [];
     }
   }
 
@@ -503,6 +517,7 @@
     useState,
     useEffect,
     useRef,
+    setHookContext,
     render: (vnode, container) => {
       mount(() => vnode, container);
     }
@@ -511,4 +526,5 @@
   global.html = html;
   global.mount = mount;
   global.scheduleRender = scheduleRender;
+  global.setHookContext = setHookContext;
 })(window);

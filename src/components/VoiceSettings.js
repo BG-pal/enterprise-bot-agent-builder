@@ -12,8 +12,49 @@
     const agent = state.currentAgent;
     if (!agent || !agent.channels.voice) return '';
 
-    // Accordion expansion states stored centrally in AppState (all false/collapsed initially)
-    const openSections = state.voiceSettingsUi?.openSections || {};
+    // Set component hook context
+    if (window.React?.setHookContext) {
+      window.React.setHookContext('VoiceSettings');
+    }
+
+    // Local React state synchronized with AppState (all collapsed initially)
+    const [expandedSections, setExpandedSections] = window.React.useState(() => {
+      return {
+        transcription: false,
+        speech: false,
+        language: false,
+        bargeIn: false,
+        dtmf: false,
+        inactivity: false,
+        noise: false,
+        recording: false,
+        security: false,
+        ...(state.voiceSettingsUi?.openSections || {})
+      };
+    });
+
+    const openSections = {
+      ...(state.voiceSettingsUi?.openSections || {}),
+      ...(expandedSections || {})
+    };
+
+    function toggleSection(sectionKey) {
+      const nextVal = !openSections[sectionKey];
+      const nextSections = {
+        ...openSections,
+        [sectionKey]: nextVal
+      };
+      if (!state.voiceSettingsUi) {
+        state.voiceSettingsUi = { openSections: {} };
+      }
+      if (!state.voiceSettingsUi.openSections) {
+        state.voiceSettingsUi.openSections = {};
+      }
+      state.voiceSettingsUi.openSections[sectionKey] = nextVal;
+      setExpandedSections(nextSections);
+      window.scheduleRender();
+    }
+
     const domainInput = state.voiceSettingsUi?.domainInput || '';
     const sttLangInput = state.voiceSettingsUi?.sttLangInput || '';
 
@@ -99,10 +140,13 @@
 
         <!-- ================= ACCORDION A: TRANSCRIPTION (ALPHA) ================= -->
         <div className="accordion ${openSections.transcription ? 'is-open' : ''}">
-          <div 
+          <button 
+            type="button"
             className="accordion-header" 
-            onClick=${() => actions.toggleVoiceAccordion('transcription')}
             id="accordion-header-transcription"
+            aria-expanded="${openSections.transcription ? 'true' : 'false'}"
+            aria-controls="accordion-content-transcription"
+            onClick=${() => toggleSection('transcription')}
           >
             <div className="accordion-title">
               ${renderIcon('mic', { size: 18, color: 'var(--color-primary)' })}
@@ -112,10 +156,15 @@
             <span className="accordion-chevron">
               ${renderIcon('chevron-down', { size: 18 })}
             </span>
-          </div>
+          </button>
 
           ${openSections.transcription ? html`
-            <div className="accordion-content">
+            <div 
+              className="accordion-content"
+              id="accordion-content-transcription"
+              role="region"
+              aria-labelledby="accordion-header-transcription"
+            >
               ${!isExternalTranscriptionAllowed ? html`
                 <div style="background: #FFFBEB; border: 1px solid #FCD34D; border-radius: var(--radius-md); padding: 12px 14px; margin-bottom: 16px; display: flex; align-items: flex-start; gap: 10px;">
                   ${renderIcon('alert-triangle', { size: 16, color: '#D97706' })}
@@ -177,10 +226,13 @@
 
         <!-- ================= ACCORDION B: SPEECH (STT / TTS TABS) ================= -->
         <div className="accordion ${openSections.speech ? 'is-open' : ''}">
-          <div 
+          <button 
+            type="button"
             className="accordion-header" 
-            onClick=${() => actions.toggleVoiceAccordion('speech')}
             id="accordion-header-speech"
+            aria-expanded="${openSections.speech ? 'true' : 'false'}"
+            aria-controls="accordion-content-speech"
+            onClick=${() => toggleSection('speech')}
           >
             <div className="accordion-title">
               ${renderIcon('volume-2', { size: 18, color: 'var(--color-primary)' })}
@@ -190,10 +242,15 @@
             <span className="accordion-chevron">
               ${renderIcon('chevron-down', { size: 18 })}
             </span>
-          </div>
+          </button>
 
           ${openSections.speech ? html`
-            <div className="accordion-content">
+            <div 
+              className="accordion-content"
+              id="accordion-content-speech"
+              role="region"
+              aria-labelledby="accordion-header-speech"
+            >
               <!-- STT / TTS Sub-tabs -->
               <div className="radio-pill-group" style="margin-bottom: 20px;">
                 <div 
@@ -417,6 +474,19 @@
                       <span className="toggle-slider"></span>
                     </label>
                   </div>
+
+                  ${agent.voiceSettings.speech.stt.replyInDetectedLanguage && (
+                    (agent.voiceSettings.speech.stt.provider?.toLowerCase().includes('azure') && ttsProvider !== 'Azure') ||
+                    (!agent.voiceSettings.speech.stt.provider?.toLowerCase().includes('azure') && ttsProvider === 'Azure') ||
+                    ttsProvider === 'ElevenLabs'
+                  ) ? html`
+                    <div style="background: #FFFBEB; border: 1px solid #FCD34D; border-radius: var(--radius-md); padding: 12px 14px; margin-top: 12px; display: flex; align-items: flex-start; gap: 10px;">
+                      ${renderIcon('alert-triangle', { size: 16, color: '#D97706' })}
+                      <div style="font-size: 13px; color: #92400E; line-height: 1.4;">
+                        <strong>Provider Mismatch Notice:</strong> "Reply in detected language" is active with disparate STT (${agent.voiceSettings.speech.stt.provider}) and TTS (${ttsProvider}) providers. Ensure both providers support dynamic language switching for your target locale catalog to prevent latency spikes or voice timbre shifts.
+                      </div>
+                    </div>
+                  ` : ''}
                 </div>
               ` : ''}
 
@@ -603,10 +673,13 @@
 
         <!-- ================= ACCORDION C: LANGUAGE (REALTIME) ================= -->
         <div className="accordion ${openSections.language ? 'is-open' : ''}">
-          <div 
+          <button 
+            type="button"
             className="accordion-header" 
-            onClick=${() => actions.toggleVoiceAccordion('language')}
             id="accordion-header-language"
+            aria-expanded="${openSections.language ? 'true' : 'false'}"
+            aria-controls="accordion-content-language"
+            onClick=${() => toggleSection('language')}
           >
             <div className="accordion-title">
               ${renderIcon('bot', { size: 18, color: 'var(--color-primary)' })}
@@ -616,10 +689,15 @@
             <span className="accordion-chevron">
               ${renderIcon('chevron-down', { size: 18 })}
             </span>
-          </div>
+          </button>
 
           ${openSections.language ? html`
-            <div className="accordion-content">
+            <div 
+              className="accordion-content"
+              id="accordion-content-language"
+              role="region"
+              aria-labelledby="accordion-header-language"
+            >
               ${!isRealtime ? html`
                 <div style="background: #FFFBEB; border: 1px solid #FCD34D; border-radius: var(--radius-md); padding: 12px 14px; margin-bottom: 16px; display: flex; align-items: flex-start; gap: 10px;">
                   ${renderIcon('alert-triangle', { size: 16, color: '#D97706' })}
@@ -715,10 +793,13 @@
 
         <!-- ================= ACCORDION D: BARGE-IN ================= -->
         <div className="accordion ${openSections.bargeIn ? 'is-open' : ''}">
-          <div 
+          <button 
+            type="button"
             className="accordion-header" 
-            onClick=${() => actions.toggleVoiceAccordion('bargeIn')}
             id="accordion-header-bargeIn"
+            aria-expanded="${openSections.bargeIn ? 'true' : 'false'}"
+            aria-controls="accordion-content-bargeIn"
+            onClick=${() => toggleSection('bargeIn')}
           >
             <div className="accordion-title">
               ${renderIcon('mic-off', { size: 18, color: 'var(--color-primary)' })}
@@ -727,10 +808,15 @@
             <span className="accordion-chevron">
               ${renderIcon('chevron-down', { size: 18 })}
             </span>
-          </div>
+          </button>
 
           ${openSections.bargeIn ? html`
-            <div className="accordion-content">
+            <div 
+              className="accordion-content"
+              id="accordion-content-bargeIn"
+              role="region"
+              aria-labelledby="accordion-header-bargeIn"
+            >
               <p className="text-secondary" style="font-size: 13px; margin-bottom: 16px;">
                 Barge-in allows the caller to interrupt spoken agent audio as soon as incoming voice activity is detected.
               </p>
@@ -772,10 +858,13 @@
 
         <!-- ================= ACCORDION E: DTMF (KEYPAD) ================= -->
         <div className="accordion ${openSections.dtmf ? 'is-open' : ''}">
-          <div 
+          <button 
+            type="button"
             className="accordion-header" 
-            onClick=${() => actions.toggleVoiceAccordion('dtmf')}
             id="accordion-header-dtmf"
+            aria-expanded="${openSections.dtmf ? 'true' : 'false'}"
+            aria-controls="accordion-content-dtmf"
+            onClick=${() => toggleSection('dtmf')}
           >
             <div className="accordion-title">
               ${renderIcon('hash', { size: 18, color: 'var(--color-primary)' })}
@@ -784,10 +873,15 @@
             <span className="accordion-chevron">
               ${renderIcon('chevron-down', { size: 18 })}
             </span>
-          </div>
+          </button>
 
           ${openSections.dtmf ? html`
-            <div className="accordion-content">
+            <div 
+              className="accordion-content"
+              id="accordion-content-dtmf"
+              role="region"
+              aria-labelledby="accordion-header-dtmf"
+            >
               <p className="text-secondary" style="font-size: 13px; margin-bottom: 16px;">
                 Keypad input ends after timeout, maximum digits, or terminator key. Configured per phone integration.
               </p>
@@ -852,10 +946,13 @@
 
         <!-- ================= ACCORDION F: INACTIVITY ================= -->
         <div className="accordion ${openSections.inactivity ? 'is-open' : ''}">
-          <div 
+          <button 
+            type="button"
             className="accordion-header" 
-            onClick=${() => actions.toggleVoiceAccordion('inactivity')}
             id="accordion-header-inactivity"
+            aria-expanded="${openSections.inactivity ? 'true' : 'false'}"
+            aria-controls="accordion-content-inactivity"
+            onClick=${() => toggleSection('inactivity')}
           >
             <div className="accordion-title">
               ${renderIcon('clock', { size: 18, color: 'var(--color-primary)' })}
@@ -864,10 +961,15 @@
             <span className="accordion-chevron">
               ${renderIcon('chevron-down', { size: 18 })}
             </span>
-          </div>
+          </button>
 
           ${openSections.inactivity ? html`
-            <div className="accordion-content">
+            <div 
+              className="accordion-content"
+              id="accordion-content-inactivity"
+              role="region"
+              aria-labelledby="accordion-header-inactivity"
+            >
               <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
                 <div>
                   <div style="font-weight: 700; font-size: 14px;">Custom inactivity handling</div>
@@ -965,10 +1067,13 @@
 
         <!-- ================= ACCORDION G: NOISE CANCELLATION ================= -->
         <div className="accordion ${openSections.noise ? 'is-open' : ''}">
-          <div 
+          <button 
+            type="button"
             className="accordion-header" 
-            onClick=${() => actions.toggleVoiceAccordion('noise')}
             id="accordion-header-noise"
+            aria-expanded="${openSections.noise ? 'true' : 'false'}"
+            aria-controls="accordion-content-noise"
+            onClick=${() => toggleSection('noise')}
           >
             <div className="accordion-title">
               ${renderIcon('shield', { size: 18, color: 'var(--color-primary)' })}
@@ -977,10 +1082,15 @@
             <span className="accordion-chevron">
               ${renderIcon('chevron-down', { size: 18 })}
             </span>
-          </div>
+          </button>
 
           ${openSections.noise ? html`
-            <div className="accordion-content">
+            <div 
+              className="accordion-content"
+              id="accordion-content-noise"
+              role="region"
+              aria-labelledby="accordion-header-noise"
+            >
               <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
                 <div>
                   <div style="font-weight: 700; font-size: 14px;">Enable noise cancellation</div>
@@ -1033,10 +1143,13 @@
 
         <!-- ================= ACCORDION H: RECORDING ================= -->
         <div className="accordion ${openSections.recording ? 'is-open' : ''}">
-          <div 
+          <button 
+            type="button"
             className="accordion-header" 
-            onClick=${() => actions.toggleVoiceAccordion('recording')}
             id="accordion-header-recording"
+            aria-expanded="${openSections.recording ? 'true' : 'false'}"
+            aria-controls="accordion-content-recording"
+            onClick=${() => toggleSection('recording')}
           >
             <div className="accordion-title">
               ${renderIcon('play', { size: 18, color: 'var(--color-primary)' })}
@@ -1045,10 +1158,15 @@
             <span className="accordion-chevron">
               ${renderIcon('chevron-down', { size: 18 })}
             </span>
-          </div>
+          </button>
 
           ${openSections.recording ? html`
-            <div className="accordion-content">
+            <div 
+              className="accordion-content"
+              id="accordion-content-recording"
+              role="region"
+              aria-labelledby="accordion-header-recording"
+            >
               <div style="display: flex; align-items: center; justify-content: space-between;">
                 <div>
                   <div style="font-weight: 700; font-size: 14px;">Enable call recording</div>
@@ -1069,10 +1187,13 @@
 
         <!-- ================= ACCORDION I: SECURITY & RETENTION ================= -->
         <div className="accordion ${openSections.security ? 'is-open' : ''}">
-          <div 
+          <button 
+            type="button"
             className="accordion-header" 
-            onClick=${() => actions.toggleVoiceAccordion('security')}
             id="accordion-header-security"
+            aria-expanded="${openSections.security ? 'true' : 'false'}"
+            aria-controls="accordion-content-security"
+            onClick=${() => toggleSection('security')}
           >
             <div className="accordion-title">
               ${renderIcon('shield', { size: 18, color: 'var(--color-primary)' })}
@@ -1082,10 +1203,15 @@
             <span className="accordion-chevron">
               ${renderIcon('chevron-down', { size: 18 })}
             </span>
-          </div>
+          </button>
 
           ${openSections.security ? html`
-            <div className="accordion-content">
+            <div 
+              className="accordion-content"
+              id="accordion-content-security"
+              role="region"
+              aria-labelledby="accordion-header-security"
+            >
               <!-- PII Redaction -->
               <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
                 <div>

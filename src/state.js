@@ -4,16 +4,35 @@
 (function (global) {
   const STORAGE_KEY = 'enterprise_bot_agents_v1';
 
+  // Deep merge helper ensuring all default sections and fields exist
+  function deepMerge(target, source) {
+    if (!source || typeof source !== 'object') return target;
+    const output = Array.isArray(target) ? [...target] : { ...target };
+    for (const key in source) {
+      if (Object.prototype.hasOwnProperty.call(source, key)) {
+        if (source[key] !== null && typeof source[key] === 'object' && !Array.isArray(source[key])) {
+          output[key] = deepMerge(target && target[key] ? target[key] : {}, source[key]);
+        } else {
+          output[key] = (target && target[key] !== undefined) ? target[key] : source[key];
+        }
+      }
+    }
+    return output;
+  }
+
   function loadInitialAgents() {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          // Normalize TTS provider and STT provider for full consistency across sessions
-          parsed.forEach(a => {
-            if (a.voiceSettings?.speech?.tts?.provider === 'Azure Neural TTS') {
-              a.voiceSettings.speech.tts.provider = 'Azure';
+          const defaults = window.ENTERPRISE_DATA?.DEFAULT_AGENT_CONFIG;
+          parsed.forEach((a, idx) => {
+            if (defaults) {
+              parsed[idx] = deepMerge(a, defaults);
+            }
+            if (parsed[idx].voiceSettings?.speech?.tts?.provider === 'Azure Neural TTS') {
+              parsed[idx].voiceSettings.speech.tts.provider = 'Azure';
             }
           });
           return parsed;

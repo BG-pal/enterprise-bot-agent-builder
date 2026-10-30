@@ -824,6 +824,28 @@ input:disabled + .toggle-slider {
   user-select: none;
   background: white;
   transition: background-color 0.15s ease;
+  width: 100%;
+  border: none;
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  text-align: left;
+}
+
+button.accordion-header {
+  border: none;
+  background: white;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  outline: none;
+}
+
+button.accordion-header:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
 }
 
 .accordion.is-open > .accordion-header {
