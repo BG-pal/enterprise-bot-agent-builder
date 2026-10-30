@@ -129,7 +129,8 @@
               `}
             </div>
           ` : html`
-            <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 14px;">
+            <div style="overflow-x: auto; width: 100%;">
+            <table style="width: 100%; min-width: 680px; border-collapse: collapse; text-align: left; font-size: 14px;">
               <thead>
                 <tr style="background-color: #F9FAFB; border-bottom: 1px solid var(--border-color); color: var(--text-secondary); font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">
                   <th style="padding: 14px 20px;">Agent Name</th>
@@ -237,6 +238,7 @@
                 })}
               </tbody>
             </table>
+            </div>
           `}
         </div>
       </div>

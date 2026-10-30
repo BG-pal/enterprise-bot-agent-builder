@@ -846,8 +846,8 @@
                         value=${agent.voiceSettings.inactivity.retryPromptMode}
                         onChange=${(e) => updateVoice('inactivity', 'retryPromptMode', e.target.value)}
                       >
-                        <option value="Fixed prompt">Fixed prompt (Default)</option>
-                        <option value="Agent generated">Agent generated</option>
+                        <option value="Agent generated">Agent generated (Default)</option>
+                        <option value="Fixed prompt">Fixed prompt</option>
                         <option value="Repeat last message">Repeat last message</option>
                         <option value="Silent retry">Silent retry</option>
                       </select>
@@ -922,10 +922,10 @@
                       value=${agent.voiceSettings.noiseCancellation.provider}
                       onChange=${(e) => updateVoice('noiseCancellation', 'provider', e.target.value)}
                     >
-                      <option value="Twilio Media Streams">Twilio Media Streams</option>
-                      <option value="FFmpeg">FFmpeg</option>
+                      <option value="FFmpeg">FFmpeg (Default)</option>
                       <option value="GStreamer">GStreamer</option>
                       <option value="AWS Elemental">AWS Elemental</option>
+                      <option value="Twilio Media Streams">Twilio Media Streams</option>
                     </select>
                   </div>
 

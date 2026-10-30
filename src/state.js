@@ -231,6 +231,11 @@
         updatedAt: new Date().toISOString()
       };
 
+      // Voice stack inherits the selection made during agent creation
+      if (newAgent.voiceModelOverride) {
+        newAgent.voiceModelOverride.speechStack = agentData.speechStack || 'cascaded';
+      }
+
       state.agents.unshift(newAgent);
       state.currentAgentId = newId;
       state.currentAgent = clone(newAgent);
@@ -238,16 +243,13 @@
       state.hasUnsavedChanges = false;
       state.currentView = 'configure';
 
-      // After-create routing as strictly specified in prompt:
-      // - Voice only: Navigate to Behaviour -> Prompts
-      // - Email selected: Navigate to Email -> Inbox
-      // - Both channels: Configuration landing overview
-      if (newAgent.channels.voice && !newAgent.channels.email) {
-        state.configTab = 'prompt';
-      } else if (!newAgent.channels.voice && newAgent.channels.email) {
+      // After-create routing as strictly specified in assignment:
+      // - Voice-only agent -> Behaviour -> Prompts
+      // - Agent with Email selected -> Email -> Inbox
+      if (newAgent.channels.email) {
         state.configTab = 'email';
       } else {
-        state.configTab = 'overview';
+        state.configTab = 'prompt';
       }
 
       addToast(`Agent "${newAgent.name}" created as Draft!`, 'success');

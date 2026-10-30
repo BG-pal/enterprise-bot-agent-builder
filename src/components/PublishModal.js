@@ -80,6 +80,9 @@
                 </div>
 
                 <!-- Copyable Version ID Card -->
+                <div style="background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: var(--radius-md); padding: 8px 12px; font-size: 11px; color: #166534; max-width: 380px; margin: 0 auto 16px;">
+                  Prototype Simulation: State transitioned to Published with mock routing registered.
+                </div>
                 <div style="background: #F8FAFC; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; max-width: 380px; margin: 0 auto 16px;">
                   <div style="text-align: left;">
                     <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text-muted);">
@@ -131,6 +134,9 @@
                   <div>• Status transition: <strong>Unsaved / Draft → Published</strong></div>
                   <div>• Active Channels: <strong>${agent.channels.voice ? 'Voice ' : ''}${agent.channels.email ? 'Email' : ''}</strong></div>
                   <div>• Primary Model: <strong>${agent.sharedModel.model}</strong></div>
+                  <div style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed #DCE6F8; font-size: 11px; color: var(--text-muted);">
+                    Prototype Simulation: Generates an immutable release version ID without calling live telephony carrier APIs.
+                  </div>
                 </div>
               </div>
             `}

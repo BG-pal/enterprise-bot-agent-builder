@@ -22,6 +22,8 @@
     const [nameError, setNameError] = React.useState('');
     const [channelError, setChannelError] = React.useState('');
     const [activeTestState, setActiveTestState] = React.useState(1);
+    const [showDemoBar, setShowDemoBar] = React.useState(false); // Collapsed by default per requirement 15
+    const [isSubmitting, setIsSubmitting] = React.useState(false); // Prevent duplicate submissions
 
     // Apply specific preset states as defined in Assignment Section 7
     function applyState(stateNumber) {
@@ -77,6 +79,8 @@
     }
 
     function handleCreate() {
+      if (isSubmitting) return;
+
       let hasError = false;
 
       // Validate name
@@ -99,6 +103,8 @@
 
       if (hasError) return;
 
+      setIsSubmitting(true);
+
       // Create new agent with values
       actions.createNewAgent({
         name: name.trim(),
@@ -111,62 +117,76 @@
       });
     }
 
-    // Is create button enabled?
-    const isCreateDisabled = !name.trim() || (!voiceOn && !emailOn);
+    // Validation status check
+    const isFormInvalid = !name.trim() || (!voiceOn && !emailOn);
 
     return html`
       <div className="content-container" style="max-width: 860px;">
-        <!-- Assignment Test States Verification Bar -->
-        <div style="background: #F0F5FF; border: 1px solid #BCD3F9; border-radius: var(--radius-lg); padding: 12px 16px; margin-bottom: 24px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
-          <div style="display: flex; align-items: center; gap: 8px;">
-            ${renderIcon('sparkles', { size: 16, color: 'var(--color-primary)' })}
-            <span style="font-weight: 700; font-size: 13px; color: var(--color-primary);">Assignment Required States:</span>
-          </div>
-          <div style="display: flex; gap: 6px; flex-wrap: wrap;">
-            <button 
-              className="btn btn-sm ${activeTestState === 1 ? 'btn-primary' : 'btn-secondary'}"
-              onClick=${() => applyState(1)}
-              title="State 1: Default configuration"
-            >
-              State 1: Default
-            </button>
-            <button 
-              className="btn btn-sm ${activeTestState === 2 ? 'btn-primary' : 'btn-secondary'}"
-              onClick=${() => applyState(2)}
-              title="State 2: Realtime Voice selected"
-            >
-              State 2: Realtime Voice
-            </button>
-            <button 
-              className="btn btn-sm ${activeTestState === 3 ? 'btn-primary' : 'btn-secondary'}"
-              onClick=${() => applyState(3)}
-              title="State 3: Email only selected"
-            >
-              State 3: Email Only
-            </button>
-            <button 
-              className="btn btn-sm ${activeTestState === 4 ? 'btn-primary' : 'btn-secondary'}"
-              onClick=${() => applyState(4)}
-              title="State 4: Empty Name validation error"
-            >
-              State 4: Name Error
-            </button>
-            <button 
-              className="btn btn-sm ${activeTestState === 5 ? 'btn-primary' : 'btn-secondary'}"
-              onClick=${() => applyState(5)}
-              title="State 5: No channel selected error"
-            >
-              State 5: Channel Error
-            </button>
-            <button 
-              className="btn btn-sm ${activeTestState === 6 ? 'btn-primary' : 'btn-secondary'}"
-              onClick=${() => applyState(6)}
-              title="State 6: Chat disabled and Coming Soon"
-            >
-              State 6: Chat Unavailable
-            </button>
-          </div>
+        <!-- Developer / Evaluator Mode Shortcut Bar (Collapsible per requirement 15) -->
+        <div style="margin-bottom: 16px; display: flex; justify-content: flex-end;">
+          <button 
+            className="btn btn-sm btn-secondary"
+            onClick=${() => setShowDemoBar(!showDemoBar)}
+            title="Toggle assignment 6-state verification toolbar"
+            style="font-size: 12px; color: var(--text-secondary);"
+          >
+            ${renderIcon('sparkles', { size: 13, color: 'var(--color-primary)' })}
+            <span>${showDemoBar ? 'Hide QA Test Bar' : 'Show QA Test Bar (6 States)'}</span>
+          </button>
         </div>
+
+        ${showDemoBar ? html`
+          <div style="background: #F0F5FF; border: 1px solid #BCD3F9; border-radius: var(--radius-lg); padding: 12px 16px; margin-bottom: 24px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; animation: fadeIn 0.15s ease-out;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              ${renderIcon('sparkles', { size: 16, color: 'var(--color-primary)' })}
+              <span style="font-weight: 700; font-size: 13px; color: var(--color-primary);">QA Demonstration States:</span>
+            </div>
+            <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+              <button 
+                className="btn btn-sm ${activeTestState === 1 ? 'btn-primary' : 'btn-secondary'}"
+                onClick=${() => applyState(1)}
+                title="State 1: Default configuration"
+              >
+                State 1: Default
+              </button>
+              <button 
+                className="btn btn-sm ${activeTestState === 2 ? 'btn-primary' : 'btn-secondary'}"
+                onClick=${() => applyState(2)}
+                title="State 2: Realtime Voice selected"
+              >
+                State 2: Realtime Voice
+              </button>
+              <button 
+                className="btn btn-sm ${activeTestState === 3 ? 'btn-primary' : 'btn-secondary'}"
+                onClick=${() => applyState(3)}
+                title="State 3: Email only selected"
+              >
+                State 3: Email Only
+              </button>
+              <button 
+                className="btn btn-sm ${activeTestState === 4 ? 'btn-primary' : 'btn-secondary'}"
+                onClick=${() => applyState(4)}
+                title="State 4: Empty Name validation error"
+              >
+                State 4: Name Error
+              </button>
+              <button 
+                className="btn btn-sm ${activeTestState === 5 ? 'btn-primary' : 'btn-secondary'}"
+                onClick=${() => applyState(5)}
+                title="State 5: No channel selected error"
+              >
+                State 5: Channel Error
+              </button>
+              <button 
+                className="btn btn-sm ${activeTestState === 6 ? 'btn-primary' : 'btn-secondary'}"
+                onClick=${() => applyState(6)}
+                title="State 6: Chat disabled and Coming Soon"
+              >
+                State 6: Chat Unavailable
+              </button>
+            </div>
+          </div>
+        ` : ''}
 
         <!-- Page Header -->
         <div style="margin-bottom: 28px;">
@@ -442,7 +462,22 @@
           </div>
         </div>
 
-        <!-- ================= SECTION C: ACTIONS ================= -->
+        <!-- ================= SECTION C: ACTIONS & NEXT STEPS ================= -->
+        <!-- Post-Creation Landing Explanation (Assignment PDF requirement) -->
+        <div style="background: #F8FAFC; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 14px 18px; margin-bottom: 24px; display: flex; align-items: flex-start; gap: 12px;">
+          <div style="color: var(--color-primary); margin-top: 1px; flex-shrink: 0;">
+            ${renderIcon('info', { size: 18 })}
+          </div>
+          <div style="font-size: 13px; color: var(--text-secondary); line-height: 1.5;">
+            <strong style="color: var(--text-primary); display: block; margin-bottom: 2px;">Next steps after creation:</strong>
+            ${!emailOn ? html`
+              <span>Your voice agent will land in <strong>Behaviour › Prompts</strong> to tune instructions, speech rules, and guardrails.</span>
+            ` : html`
+              <span>Your email-enabled agent will land in <strong>Email › Inbox</strong> to connect and verify your team mailbox.</span>
+            `}
+          </div>
+        </div>
+
         <div style="display: flex; align-items: center; justify-content: flex-end; gap: 12px; margin-bottom: 40px;">
           <button 
             className="btn btn-secondary btn-lg"
@@ -456,14 +491,19 @@
           </button>
 
           <button 
-            className="btn btn-primary btn-lg"
+            className="btn btn-primary btn-lg ${isFormInvalid ? 'disabled' : ''}"
             onClick=${handleCreate}
-            disabled=${isCreateDisabled}
+            disabled=${isSubmitting}
             id="btn-submit-create"
-            title="${isCreateDisabled ? 'Enter a name and select at least one channel' : 'Create agent'}"
+            title="${isFormInvalid ? 'Enter a name and select at least one channel' : 'Create agent'}"
           >
-            ${renderIcon('check', { size: 18, color: '#FFFFFF' })}
-            <span>Create Agent</span>
+            ${isSubmitting ? html`
+              <span className="pulsing-dot" style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #FFFFFF; margin-right: 6px;"></span>
+              <span>Creating…</span>
+            ` : html`
+              ${renderIcon('check', { size: 18, color: '#FFFFFF' })}
+              <span>Create Agent</span>
+            `}
           </button>
         </div>
       </div>

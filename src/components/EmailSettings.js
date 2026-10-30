@@ -98,11 +98,11 @@
                 ${renderIcon('mail', { size: 22 })}
               </div>
               <div style="font-weight: 700; font-size: 15px; margin-bottom: 4px;">No mailbox connected</div>
-              <div className="text-secondary" style="font-size: 13px; max-width: 380px; margin: 0 auto 16px;">
-                This agent cannot answer emails until a company mailbox is connected.
+              <div className="text-secondary" style="font-size: 13px; max-width: 440px; margin: 0 auto 16px; line-height: 1.4;">
+                Required to answer customer emails. Connect a mailbox through <strong>Settings → Channels → Mail</strong>, or use the shortcut below.
               </div>
               <button className="btn btn-primary btn-sm" onClick=${() => setConnectModalOpen(true)}>
-                Connect Mailbox Now
+                Connect Mailbox (Settings → Channels → Mail)
               </button>
             </div>
           ` : html`
@@ -121,6 +121,17 @@
 
                   <div style="display: flex; align-items: center; gap: 8px;">
                     <span className="badge badge-published">Connected</span>
+                    <button 
+                      className="btn btn-secondary btn-sm"
+                      onClick=${() => {
+                        setMailboxNameInput(mb.name);
+                        setMailboxAddressInput(mb.address);
+                        setConnectModalOpen(true);
+                      }}
+                      title="Edit Mailbox Source"
+                    >
+                      Edit Source
+                    </button>
                     <button 
                       className="btn btn-secondary btn-sm"
                       onClick=${() => actions.addToast(`Pinged ${mb.address}: Connection verified (200 OK)`, 'success')}
@@ -589,6 +600,50 @@
                 <option value="Answer without the file">Answer without the file</option>
               </select>
             </div>
+
+            <div>
+              <label className="form-label">When a file is skipped</label>
+              <select 
+                className="form-select"
+                value=${agent.emailSettings.attachments.fileSkippedAction || 'Tell the sender which file was skipped'}
+                onChange=${(e) => updateEmail('attachments', 'fileSkippedAction', e.target.value)}
+              >
+                <option value="Tell the sender which file was skipped">Tell the sender which file was skipped (Default)</option>
+                <option value="Escalate">Escalate</option>
+                <option value="Skip silently">Skip silently</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Split a file into separate documents -->
+          <div style="padding-top: 14px; border-top: 1px solid var(--border-color); margin-top: 14px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+              <div>
+                <div style="font-weight: 700; font-size: 14px;">Split a file into separate documents</div>
+                <div className="text-secondary" style="font-size: 13px;">One PDF often holds multiple invoices or forms. Default OFF.</div>
+              </div>
+              <label className="toggle-switch">
+                <input 
+                  type="checkbox" 
+                  checked=${agent.emailSettings.attachments.splitFiles}
+                  onChange=${(e) => updateEmail('attachments', 'splitFiles', e.target.checked)}
+                />
+                <span className="toggle-slider"></span>
+              </label>
+            </div>
+            ${agent.emailSettings.attachments.splitFiles ? html`
+              <div style="width: 280px; margin-bottom: 14px; animation: fadeIn 0.15s ease-out;">
+                <label className="form-label">When unclear</label>
+                <select 
+                  className="form-select"
+                  value=${agent.emailSettings.attachments.unclearSplitAction || 'Treat as one document'}
+                  onChange=${(e) => updateEmail('attachments', 'unclearSplitAction', e.target.value)}
+                >
+                  <option value="Treat as one document">Treat as one document (Default)</option>
+                  <option value="Escalate">Escalate</option>
+                </select>
+              </div>
+            ` : ''}
           </div>
 
           <div style="display: flex; align-items: center; justify-content: space-between; padding-top: 12px; border-top: 1px solid var(--border-color);">
@@ -676,6 +731,37 @@
               />
               <span className="toggle-slider"></span>
             </label>
+          </div>
+
+          <!-- Mask personal data before it is stored -->
+          <div style="padding-top: 14px; border-top: 1px solid var(--border-color); margin-top: 14px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+              <div>
+                <div style="font-weight: 700; font-size: 14px;">Mask personal data before it is stored</div>
+                <div className="text-secondary" style="font-size: 13px;">Masked values can still be used to answer. Default ON.</div>
+              </div>
+              <label className="toggle-switch">
+                <input 
+                  type="checkbox" 
+                  checked=${agent.emailSettings.security.maskPersonalData}
+                  onChange=${(e) => updateEmail('security', 'maskPersonalData', e.target.checked)}
+                />
+                <span className="toggle-slider"></span>
+              </label>
+            </div>
+            ${agent.emailSettings.security.maskPersonalData ? html`
+              <div style="width: 280px; animation: fadeIn 0.15s ease-out;">
+                <label className="form-label">Keep in the clear</label>
+                <input 
+                  type="text" 
+                  className="form-input" 
+                  value=${agent.emailSettings.security.keepInClear || 'Extracted values'}
+                  disabled
+                  style="background: #F3F4F6;"
+                />
+                <div className="helper-text">Extracted values you need to read back later.</div>
+              </div>
+            ` : ''}
           </div>
         </div>
 

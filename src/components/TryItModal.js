@@ -540,7 +540,7 @@
                               <div style="font-size: 12px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px;">
                                 Extracted Entities:
                               </div>
-                              <div style="background: #F8FAFC; border: 1px solid var(--border-color); border-radius: var(--radius-sm); overflow: hidden;">
+                              <div style="background: #F8FAFC; border: 1px solid var(--border-color); border-radius: var(--radius-sm); overflow-x: auto;">
                                 <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
                                   <thead>
                                     <tr style="background: #F1F5F9; text-align: left; color: var(--text-secondary);">

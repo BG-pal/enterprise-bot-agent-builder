@@ -1,0 +1,146 @@
+﻿View,Group,Channel,Field,Required,Default,Options / values,What it does / when it applies
+Creation,Actions,—,Cancel,—,—,—,Back to Assistants → Agents; nothing saved
+Creation,Actions,—,Create Agent,—,Disabled,—,Available only when Name is filled and Voice or Email is selected; opens the new agent's configuration
+Creation,Channels,Voice,Voice,One of Voice / Email,Checked,On | Off,Answers phone calls. — Whole row clickable
+Creation,Channels,Voice,Speech stack,"Yes, if Voice on",Cascaded,Cascaded | Realtime Voice,"Cascaded: separate speech-to-text and text-to-speech around a text model; flexible, supports tools. Realtime Voice: one speech-to-speech model; lowest latency, guardrails/PII not yet enforced. — Only when Voice is selected"
+Creation,Channels,Email,Email,One of Voice / Email,Unchecked,On | Off,Replies from a mailbox. — Mailbox is connected after creation
+Creation,Channels,Chat,Chat,No,Disabled,—,Answers web and WhatsApp messages. — Not selectable; faded; not focusable — [Soon]
+Creation,Details,—,Name,Yes,Empty,—,"Error ""Required"" when Create pressed empty"
+Creation,Details,—,Primary language,No,English (US),English (US) | English (UK) | German | French | Italian | Spanish | Portuguese | Polish,"Used for speech, prompts and transcript defaults."
+Creation,Details,—,Description,No,Empty,—,Optional — helps the team tell agents apart.
+Creation,Details,Voice,Welcome message,No,Empty → team default,—,"Spoken first, before the caller says anything. — Always shown today, though only spoken on Voice"
+Creation,Details,—,Instructions / Prompt,No,Empty → team default,—,The system prompt. Everything else can be tuned after the agent exists.
+Creation,Actions,—,After create — where the user lands,—,—,—,"Voice only → Behaviour › Prompts. Email picked → Email › Inbox (empty, connect a mailbox)"
+Configuration,Prompt,All channels,Welcome message,—,From create,—,—
+Configuration,Prompt,All channels,Instructions / Prompt,—,From create,—,—
+Configuration,Prompt,All channels,Guidelines › Voice Response Rules,—,Empty,—,—
+Configuration,Prompt,All channels,Guidelines › Text Response Rules,—,Empty,—,—
+Configuration,Prompt,All channels,Guidelines › Call transfer,—,Empty,—,When and where to hand the call to a human.
+Configuration,Prompt,All channels,Guidelines › Expected Output,—,Empty,—,What a successful turn should produce.
+Configuration,Prompt,All channels,Rewrite with AI,—,—,—,Available on every prompt field; rewrites the text and lets the user keep or discard it
+Configuration,Tools,All channels,Tool Call Custom Messages,—,Off,On | Off,"Plays a message when the agent calls a tool. Set it per tool, or fall back to the default below."
+Configuration,Tools,All channels,Default message,"Yes, if toggle on",Empty,—,Used for any tool without its own message
+Configuration,Tools,All channels,Assigned Tools,—,None,Team tool library,"Empty state ""No tools assigned""; some tools tagged ""Not on Realtime voice"""
+Configuration,Tools,All channels,Bound entities,—,—,Global entities,"Global entities this agent recognises, on every channel"
+Configuration,Tools,All channels,Tags,—,—,—,Applied to every conversation this agent handles
+Configuration,Model settings,All channels,Model,Yes,azure/gpt-4.1-mini/eu (team shared model),Team model list,Large language model that generates responses.
+Configuration,Model settings,All channels,Response Modality,—,Audio,Audio | Text,Format the model replies in.
+Configuration,Model settings,All channels,Tool call limit,—,5,Integer,Max tools the agent may call per turn.
+Configuration,Model settings,All channels,Temperature,—,0.5,0 – 1.0,Higher values make replies more creative.
+Configuration,Model settings,All channels,Date & time › Add date/time to instructions,—,Off,On | Off,Inject the current date and time into the prompt. — Precision + Timezone shown when on
+Configuration,Model settings,All channels,Date & time › Precision,—,—,Day | Hour | Minute,Lower precision keeps the prompt stable for longer.
+Configuration,Model settings,All channels,Date & time › Timezone,—,Team timezone,IANA timezones,Timezone used for date and time values.
+Configuration,Model settings,All channels,History › Add history summary,—,On,On | Off,Summarize older turns instead of sending them raw.
+Configuration,Model settings,All channels,History › Number of history responses,—,10,Integer,Recent turns kept in context.
+Configuration,Model settings,All channels,History › Trigger tokens,—,8000,Integer,Context size that starts a cleanup. — Keep Target ≈ 50–70% of Trigger
+Configuration,Model settings,All channels,History › Target tokens,—,5000,Integer,Context size retained after cleanup.
+Configuration,Model settings,Voice,Override the agent model,—,Off,On | Off,Off = uses Behaviour model
+Configuration,Model settings,Voice,Voice stack,—,From create,Cascaded | Realtime,Shown when override on
+Configuration,Model settings,Voice,Model (Realtime),—,azure/gpt-realtime-2.1/global,azure/gpt-realtime-2.1/global | azure/gpt-realtime-mini/global | vertex_ai/gemini-live-2.5-flash-native-audio | vertex_ai/gemini-live-2.5-flash,Realtime stack only
+Configuration,Model settings,Voice,Model (Cascaded),—,azure/gpt-4.1-mini/eu,azure/gpt-4.1/eu | azure/gpt-4.1-mini/eu | azure/gpt-4o/eu | openai/gpt-4o/global | vertex_ai/gemini-2.5-flash/eu | anthropic/claude-sonnet-4.5/eu,Cascaded stack only
+Configuration,Model settings,Voice,Response Modality,—,Audio,Audio | Text,Format the model replies in.
+Configuration,Model settings,Voice,Tool call limit,—,Inherited,Integer,The maximum number of tool calls per turn. Keeps behaviour predictable and controls cost.
+Configuration,Model settings,Voice,Reasoning,—,Minimal,Minimal | Low | Medium | High,How much internal chain-of-thought the model runs before it answers.
+Configuration,Model settings,Voice,Temperature,—,Inherited,0 – 1.0,Higher values make replies more creative.
+Configuration,Model settings,Voice,Voice (Realtime),—,"Aria — calm, mid-pitch",Aria | Nova | Onyx | Sage,The voice callers hear on this channel. — Realtime only
+Configuration,Model settings,Voice,Turn detection,—,Server VAD · 0.6 s,Server VAD · 0.4 s | 0.6 s | 1.0 s | Semantic VAD | Push to talk,How the model decides the caller has finished speaking. — Realtime only
+Configuration,Model settings,Voice,History › Add history summary,—,On,On | Off,Include conversation history in context. — Override on only
+Configuration,Model settings,Voice,History › Number of history responses / Trigger / Target tokens,—,5 / 15000 / 10000,Integers,Same rule as Behaviour; equal values force cleanup every turn.
+Configuration,Model settings,Email,Override the agent model,—,Off,On | Off,Off = uses Behaviour model
+Configuration,Model settings,Email,Model,—,azure/gpt-4.1/eu,azure/gpt-4.1/eu | azure/gpt-4.1-mini/eu | azure/gpt-4o/eu | openai/gpt-4o/global | vertex_ai/gemini-2.5-flash/eu | anthropic/claude-sonnet-4.5/eu,When override on
+Configuration,Model settings,Email,Response Modality,—,Text,—,"Email has no speech stage, so replies are always text."
+Configuration,Model settings,Email,Tool call limit / Temperature,—,Inherited,—,—
+Configuration,Model settings,Email,History › Add history summary / Number of history responses,—,On / 5,—,Include earlier messages in the thread. — Override on only; off forwards raw thread messages
+Configuration,Voice settings,Voice,Transcription › Enable external transcription,—,Off,On | Off,Use an alternate STT path for the realtime model's user transcripts. — Realtime + override only — [Alpha]
+Configuration,Voice settings,Voice,Transcription › Transcription STT profile,No,Use agent's default STT profile,Team STT profiles,Leave empty to use the agent's default STT profile. — [Alpha]
+Configuration,Voice settings,Voice,Transcription › Allowed languages,—,"en, hi",Language codes,Languages the STT engine accepts. — [Alpha]
+Configuration,Voice settings,Voice,Speech › Voice (TTS),—,Provider default,Provider voice list,Select the voice to use for speech synthesis — Cascaded stack
+Configuration,Voice settings,Voice,Speech › Silence Timeout,—,400,Integer ms,Maximum silence before timing out (default 300ms)
+Configuration,Voice settings,Voice,Speech › STT / TTS tabs,—,STT,STT | TTS,Cascaded
+Configuration,Voice settings,Voice,Speech › Speech service (STT),Yes,Team default service,Azure | Soniox | Deepgram | Google | …,Select the speech service provider for speech recognition
+Configuration,Voice settings,Voice,Speech › Language list,—,"en-US, de-DE",Language codes,Languages the agent should recognize — Enter to add
+Configuration,Voice settings,Voice,Speech › Reply in detected language,—,Off,On | Off,TTS speaks the language STT detects on each turn — Warning when STT and TTS providers differ
+Configuration,Voice settings,Voice,Speech › Segmentation silence timeout,—,500,Integer ms,Maximum silence before speech is segmented
+Configuration,Voice settings,Voice,Speech › Custom model ID,No,Empty,—,Use a custom-trained Azure STT model — Azure only; single language recommended
+Configuration,Voice settings,Voice,Speech › STT model,—,Provider default,Provider models,—
+Configuration,Voice settings,Voice,Speech › Profanity filter mode,—,Masked,Off | Masked | Removed | Tagged only,How profanity is handled in transcribed text
+Configuration,Voice settings,Voice,Speech › TTS: speed / pitch / volume / style / style degree,—,1.1 / default / default / neutral / 1.0,—,Azure TTS
+Configuration,Voice settings,Voice,"Speech › TTS (ElevenLabs): voice ID, model, stability, similarity, style exaggeration, speaker boost",—,eleven_flash_v2_5 / 0.5 / 0.75 / 0 / on,—,ElevenLabs TTS
+Configuration,Voice settings,Voice,Language › Language Control,—,Off,On | Off,Turn on to set primary and supported languages; the agent replies in the caller's language. — Realtime only
+Configuration,Voice settings,Voice,Language › Primary / Supported languages,—,—,Languages,When Language Control on
+Configuration,Voice settings,Voice,Barge-in › Agent Responses,—,On,On | Off,AI responses are agent-generated
+Configuration,Voice settings,Voice,Barge-in › Platform Messages,—,Off,On | Off,—
+Configuration,Voice settings,Voice,DTMF › DTMF / Barge-in / Inter-digit timeout / Max digits / Terminator,—,—,"ms, integer, # or *","A key press interrupts the agent; input ends after timeout, max digits or terminator — Set per phone integration"
+Configuration,Voice settings,Voice,Inactivity › Custom inactivity handling,—,Off,On | Off,Check in with the caller when they go silent after the agent speaks.
+Configuration,Voice settings,Voice,Inactivity › Initial Wait Time / Retry Interval (ms) / Inactivity Retries,—,5000 / 8000 / 2,Integers,When on
+Configuration,Voice settings,Voice,Inactivity › Retry Prompt Mode,—,Agent generated,Agent generated | Fixed prompt | Repeat last message | Silent retry,—
+Configuration,Voice settings,Voice,Inactivity › Inactivity Action,—,Hang up,Hang up | Transfer to human | Keep waiting | Play voicemail prompt,—
+Configuration,Voice settings,Voice,Inactivity › Inactivity Prompt,—,Are you still there?,—,Fixed prompt mode
+Configuration,Voice settings,Voice,Noise cancellation › Enable noise cancellation,—,Off,On | Off,Eliminates noise in audio when enabled
+Configuration,Voice settings,Voice,Noise cancellation › Provider / Model,—,FFmpeg / Default,FFmpeg | GStreamer | AWS Elemental | Twilio Media Streams; Default | Low latency | High quality | Bandwidth saver,When on
+Configuration,Voice settings,Voice,Recording › Enable recording,—,Off,On | Off,Store call audio for later review
+Configuration,Voice settings,Voice,Security › PII redaction,—,On,On | Off,"Mask emails, phone numbers and card data in transcripts."
+Configuration,Voice settings,Voice,Security › Rate limit (per user / min),—,30 requests,—,—
+Configuration,Voice settings,Voice,Security › Data retention,—,30 days,Retention periods,—
+Configuration,Voice settings,Voice,Security › Allowed domains,—,"app.acme.com, support.acme.com",Domains,—
+Configuration,Email settings,Email,Inbox › Mailboxes,"Yes, to answer",None (empty state),Mailboxes from Settings › Channels › Mail,A mailbox answers for one agent — Row menu: Edit source | Test connection | Remove
+Configuration,Email settings,Email,Inbox › Thread window,—,14 days,7 | 14 | 30 | 90 days,"After this, a reply starts a new thread. Applies to every source."
+Configuration,Email settings,Email,Threading › Reply to,—,Sender only,"Sender only | Reply all | Sender, and keep the original To line",Reply-all keeps everyone on the thread in the loop.
+Configuration,Email settings,Email,Threading › Quote the original,—,On,On | Off,Append the message being answered below the reply.
+Configuration,Email settings,Email,Threading › Send as,—,On behalf of a named person,The mailbox | On behalf of a named person | A separate reply-to address,The address and name on the From line.
+Configuration,Email settings,Email,Threading › Person / Their address,"Yes, if ""On behalf of""",—,—,Mailbox must grant Send on behalf of.
+Configuration,Email settings,Email,Threading › Reply-to address,"Yes, if ""Separate reply-to""",—,—,Replies from the customer go here instead.
+Configuration,Email settings,Email,Threading › Default CC,No,None,Email addresses,Copied on every reply this agent sends. — Enter to add
+Configuration,Email settings,Email,Threading › Append a signature,—,On,On | Off,"Added below every reply, above the quoted thread."
+Configuration,Email settings,Email,Threading › Signature,—,Team signature,Team signature | Mailbox signature | Agent signature,Agent signature is used only by this agent. — Textarea for Agent signature
+Configuration,Email settings,Email,Replies › Send mode,—,Draft for review,Draft for review | Send automatically,—
+Configuration,Email settings,Email,Replies › When something is missing,—,Ask the sender for what is missing,Ask the sender | Answer with what is available | Escalate to a person,—
+Configuration,Email settings,Email,Triage › Answer,—,Every message in the folder,Every message | Only listed sender domains | Only matching subjects | Listed domains and subjects,Anything outside this is left untouched.
+Configuration,Email settings,Email,Triage › Sender domains / Subject contains,If chosen in Answer,—,—,"Mail from other domains ignored / case-insensitive, any match"
+Configuration,Email settings,Email,Triage › Never answer,—,—,Categories,Categories left alone even when they match. — [Soon]
+Configuration,Email settings,Email,Escalation › Hand a thread to a person,—,Off,On | Off,"Forwards the thread, then the agent stops replying."
+Configuration,Email settings,Email,Escalation › Escalate when,—,The sender asks for a person,Asks for a person | Agent is unsure | After 3 replies without resolution | Any of these,When on
+Configuration,Email settings,Email,Escalation › Forward to,—,Support · Tier 1,Support · Tier 1 | Support · Billing | A named mailbox | Genesys queue,Mailbox address or Genesys queue field follows the pick
+Configuration,Email settings,Email,Escalation › Tell the sender,—,On,On | Off,Send a short note so the thread does not go quiet.
+Configuration,Email settings,Email,Attachments › Read inbound attachments,—,On,On | Off,"Pass files to the model as context. — Up to 5 MB a file, 20 MB / 10 files an email"
+Configuration,Email settings,Email,Attachments › Formats read / PDF reading / Pages read,—,20 pages an email,5 | 10 | 20 | 50 pages,Unsupported formats: sender is told which work.
+Configuration,Email settings,Email,Attachments › Split a file into separate documents,—,Off,On | Off,One PDF often holds several invoices. — When unclear: Treat as one document | Escalate
+Configuration,Email settings,Email,Attachments › Password-protected file,—,Ask the sender for an unlocked copy,Ask for unlocked copy | Escalate | Answer without the file,—
+Configuration,Email settings,Email,Attachments › When a file is skipped,—,Tell the sender which file was skipped,Tell the sender | Escalate | Skip silently,—
+Configuration,Email settings,Email,Attachments › Store received files,—,Off,On | Off,Off means a file is read then discarded.
+Configuration,Email settings,Email,Security › Scan for injected instructions,—,On,On | Off,"Runs before extraction, so a hit never reaches the model."
+Configuration,Email settings,Email,Security › On a hit,—,Strip the injected lines and carry on,Strip and carry on | Escalate | Refuse to reply,—
+Configuration,Email settings,Email,Security › Refuse to reveal the agent's own setup,—,On,On | Off,"Holds the reply if it would quote the prompt, tools or model."
+Configuration,Email settings,Email,Security › Mask personal data before it is stored,—,On,On | Off,Masked values can still be used to answer.
+Configuration,Email settings,Email,Security › Keep in the clear,—,—,Extracted values,Values you need to read back later.
+Configuration,Email settings,Email,Security › Keep threads for,—,12 months,30 days | 6 | 12 | 24 months | Keep indefinitely,Threads are business records.
+Configuration,Email settings,Email,Extraction › Extract values before replying,—,Off,On | Off,Runs the LLM extraction service over the thread. — Read-only until built — [Soon]
+Configuration,Email settings,Email,"Extraction › Look in / Values to find (name, description, required)",—,None,Subject | Body | Attachments,"Described in plain words — no pattern needed. — Empty state ""No values defined"" — [Soon]"
+Configuration,Email settings,Email,Extraction › When a required value is missing or unresolved,—,Ask the sender to confirm,Ask to confirm | Escalate | Answer without it,[Soon]
+Configuration,Email settings,Email,Extraction › Record where each value came from,—,On,On | Off,Shown as proofs on the response pipeline. — [Soon]
+Configuration,Email settings,Email,Loop protection › Ignore automated mail / Replies per sender per hour / When the cap is hit,—,On / — / Pause and flag the thread,Pause and flag | Escalate | Ignore sender for an hour,"Skips out-of-office, bounces and bulk mail. — Read-only until built — [Soon]"
+Configuration,Email settings,Email,Delivery failures › Retry a failed send / Attempts / After the last attempt / Notify,—,On / — / Flag for review / Workspace admins,Flag | Escalate | Leave unread; Admins | Escalation queue | No one,Transient errors are retried with growing delay. — Read-only until built — [Soon]
+Configuration,Try it,All channels,Test channel,—,—,Voice | Chat [Soon] | Email,Starts a test of the current (unpublished) configuration on the picked channel
+Configuration,Try it,Voice,Call status,—,Live,Live | Ended,—
+Configuration,Try it,Voice,Agent name and call timer,—,—,mm:ss,—
+Configuration,Try it,Voice,Mute / unmute,—,Unmuted,—,—
+Configuration,Try it,Voice,Show / hide transcript,—,Shown,—,—
+Configuration,Try it,Voice,End call,—,—,—,"After ending: who ended it, call length, call again, view call logs"
+Configuration,Try it,Voice,Live transcript,—,—,Caller turns | Agent turns,Appears turn by turn during the call
+Configuration,Try it,Voice,Tools used per agent turn,—,—,"Tool names (e.g. kb_search, crm_lookup_policy)",Shown with each agent response
+Configuration,Try it,Email,From,—,Signed-in user,—,Read-only
+Configuration,Try it,Email,To,—,Agent mailbox,—,Read-only
+Configuration,Try it,Email,Subject,—,Empty,—,Required to send
+Configuration,Try it,Email,Body,—,Empty,—,Required to send
+Configuration,Try it,Email,Send,—,—,—,Available when Subject and Body are filled; nothing reaches a real mailbox
+Configuration,Try it,Email,Thread — sent email and agent reply,—,—,—,"Each message can be opened and closed; newest open by default; shows a ""writing a reply"" state while waiting"
+Configuration,Try it,Email,Agent signature,—,From Email settings,—,Shown under the reply when a signature is set
+Configuration,Try it,Email,Tools used for the reply,—,—,Tool names,Can be hidden by default
+Configuration,Try it,Email,Entities extracted from the email,—,—,Entity name | Value | Confidence,"e.g. customer_name, policy_number, incident_date — can be hidden by default"
+Configuration,Try it,Email,New test email,—,—,—,Starts a fresh thread
+Configuration,Try it,Chat,Chat test,—,—,—,[Soon] — not available yet
+Configuration,Publish,All channels,Publish state,—,Published,Published | Unsaved changes | Publishing… | Published,"Any edit makes the agent ""unsaved""; publishing makes it live"
+Configuration,Publish,All channels,Save / Publish action,—,Unavailable until something changes,—,Must say why when unavailable
+Configuration,Publish,All channels,Version name,No,Empty,—,Optional label for the published version
+Configuration,Publish,All channels,Version ID,—,Generated,—,Copyable
+Configuration,Publish,All channels,Discard changes,—,—,—,Returns to the last published version

@@ -59,10 +59,10 @@ const REASONING_LEVELS = [
 ];
 
 const TIMEZONES = [
+  'Europe/Zurich (Team default)',
   'UTC',
   'America/New_York (EST/EDT)',
   'Europe/London (GMT/BST)',
-  'Europe/Zurich (CET/CEST)',
   'Europe/Berlin (CET)',
   'Asia/Kolkata (IST)',
   'Asia/Tokyo (JST)'
@@ -152,9 +152,9 @@ const DEFAULT_AGENT_CONFIG = {
   // Tools configuration
   toolCallCustomMessages: false,
   toolDefaultMessage: '',
-  assignedTools: ['kb_search', 'crm_lookup_policy'],
-  boundEntities: ['customer_id', 'claim_id'],
-  tags: ['customer-support', 'tier-1'],
+  assignedTools: [], // Default: None per assignment
+  boundEntities: [], // Default: Not preselected per assignment
+  tags: [], // Default: Empty optional per assignment
 
   // Model Settings - Shared
   sharedModel: {
@@ -164,7 +164,7 @@ const DEFAULT_AGENT_CONFIG = {
     temperature: 0.5,
     dateTimeEnabled: false,
     dateTimePrecision: 'Minute',
-    dateTimeTimezone: 'UTC',
+    dateTimeTimezone: 'Europe/Zurich (Team default)',
     historySummaryEnabled: true,
     historyResponses: 10,
     triggerTokens: 8000,
@@ -194,7 +194,7 @@ const DEFAULT_AGENT_CONFIG = {
   // Model Settings - Email Override
   emailModelOverride: {
     enabled: false,
-    model: 'azure/gpt-4.1-mini/eu',
+    model: 'azure/gpt-4.1/eu',
     responseModality: 'Text', // read-only
     toolCallLimit: 'Inherited',
     temperature: 'Inherited',
@@ -260,13 +260,13 @@ const DEFAULT_AGENT_CONFIG = {
       initialWaitTime: 5000,
       retryInterval: 8000,
       inactivityRetries: 2,
-      retryPromptMode: 'Fixed prompt',
+      retryPromptMode: 'Agent generated',
       inactivityAction: 'Hang up',
       inactivityPrompt: 'Are you still there?'
     },
     noiseCancellation: {
       enabled: false,
-      provider: 'Twilio Media Streams',
+      provider: 'FFmpeg',
       model: 'Default'
     },
     recording: {
@@ -293,7 +293,7 @@ const DEFAULT_AGENT_CONFIG = {
       personName: 'Support Agent',
       personAddress: 'support.rep@acme.enterprisebot.ai',
       replyToAddress: '',
-      defaultCC: ['claims-tracking@acme.com'],
+      defaultCC: [],
       appendSignature: true,
       signatureType: 'Team signature',
       agentSignatureText: 'Best regards,\nCustomer Support AI Team\nAcme Enterprise'
@@ -304,7 +304,7 @@ const DEFAULT_AGENT_CONFIG = {
     },
     triage: {
       answerScope: 'Every message in the folder',
-      senderDomains: ['acme.com', 'clientpartners.org'],
+      senderDomains: [],
       subjectContains: '',
       neverAnswerCategories: [] // Coming soon
     },
@@ -336,7 +336,7 @@ const DEFAULT_AGENT_CONFIG = {
     extraction: { // Coming Soon
       enabled: false,
       lookIn: ['Subject', 'Body', 'Attachments'],
-      valuesToFind: ['policy_number', 'claim_id'],
+      valuesToFind: [],
       missingAction: 'Ask to confirm',
       recordSource: true
     },

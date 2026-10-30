@@ -107,7 +107,7 @@
               <div className="ai-rewrite-header">
                 <div className="ai-badge">
                   ${renderIcon('sparkles', { size: 14, color: 'var(--color-primary)' })}
-                  <span>Suggested AI Rewrite</span>
+                  <span>Suggested AI Rewrite (Prototype Simulation)</span>
                 </div>
                 <div style="display: flex; align-items: center; gap: 8px;">
                   <button 
@@ -125,6 +125,9 @@
                     <span>Keep</span>
                   </button>
                 </div>
+              </div>
+              <div style="font-size: 11px; color: var(--text-secondary); margin-bottom: 6px;">
+                Simulated AI model suggestion. Click <strong>Keep</strong> to apply to your prompt, or <strong>Discard</strong> to revert.
               </div>
               <div style="font-size: 13px; line-height: 1.5; color: var(--text-primary); white-space: pre-wrap; background: white; padding: 10px 12px; border-radius: var(--radius-sm); border: 1px solid #D9E5FC;">
                 ${suggestion}
