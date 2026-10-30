@@ -83,6 +83,22 @@
     }
   }
 
+  // Delegated accordion click listener (fail-safe fallback)
+  if (!window._accordionDelegatedAttached) {
+    window._accordionDelegatedAttached = true;
+    document.addEventListener('click', function (e) {
+      const header = e.target.closest ? e.target.closest('.accordion-header') : null;
+      if (header && !header.onclick) {
+        const sectionKey = header.getAttribute('data-section') || 
+                          (header.id ? header.id.replace('accordion-header-', '') : null);
+        if (sectionKey && window.AppActions && typeof window.AppActions.toggleVoiceAccordion === 'function') {
+          e.preventDefault();
+          window.AppActions.toggleVoiceAccordion(sectionKey);
+        }
+      }
+    });
+  }
+
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {

@@ -384,11 +384,9 @@
       return;
     }
 
-    // Event handlers
+    // Event handlers (use direct property assignment to avoid duplicate invocations)
     if (key.startsWith('on') && typeof val === 'function') {
-      const eventName = key.slice(2).toLowerCase();
       el[key.toLowerCase()] = val;
-      el.addEventListener(eventName, val);
       return;
     }
 
@@ -498,6 +496,17 @@
           }
         } else if (child !== null && child !== undefined && child !== false) {
           el.appendChild(createDomNode(child, isSvg));
+        }
+      }
+    }
+
+    // Re-apply value on SELECT elements AFTER child options are appended to the DOM
+    if (tagName === 'select' && vnode.props && vnode.props.value !== undefined) {
+      const expectedVal = String(vnode.props.value);
+      el.value = expectedVal;
+      if (el.options && el.options.length > 0) {
+        for (let i = 0; i < el.options.length; i++) {
+          el.options[i].selected = (el.options[i].value === expectedVal);
         }
       }
     }

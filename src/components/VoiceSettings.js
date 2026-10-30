@@ -133,6 +133,7 @@
             type="button"
             className="accordion-header" 
             id="accordion-header-transcription"
+            data-section="transcription"
             aria-expanded="${openSections.transcription ? 'true' : 'false'}"
             aria-controls="accordion-content-transcription"
             onClick=${() => toggleSection('transcription')}
@@ -219,6 +220,7 @@
             type="button"
             className="accordion-header" 
             id="accordion-header-speech"
+            data-section="speech"
             aria-expanded="${openSections.speech ? 'true' : 'false'}"
             aria-controls="accordion-content-speech"
             onClick=${() => toggleSection('speech')}
@@ -721,6 +723,7 @@
             type="button"
             className="accordion-header" 
             id="accordion-header-language"
+            data-section="language"
             aria-expanded="${openSections.language ? 'true' : 'false'}"
             aria-controls="accordion-content-language"
             onClick=${() => toggleSection('language')}
@@ -841,6 +844,7 @@
             type="button"
             className="accordion-header" 
             id="accordion-header-bargeIn"
+            data-section="bargeIn"
             aria-expanded="${openSections.bargeIn ? 'true' : 'false'}"
             aria-controls="accordion-content-bargeIn"
             onClick=${() => toggleSection('bargeIn')}
@@ -906,6 +910,7 @@
             type="button"
             className="accordion-header" 
             id="accordion-header-dtmf"
+            data-section="dtmf"
             aria-expanded="${openSections.dtmf ? 'true' : 'false'}"
             aria-controls="accordion-content-dtmf"
             onClick=${() => toggleSection('dtmf')}
@@ -1011,6 +1016,7 @@
             type="button"
             className="accordion-header" 
             id="accordion-header-inactivity"
+            data-section="inactivity"
             aria-expanded="${openSections.inactivity ? 'true' : 'false'}"
             aria-controls="accordion-content-inactivity"
             onClick=${() => toggleSection('inactivity')}
@@ -1132,6 +1138,7 @@
             type="button"
             className="accordion-header" 
             id="accordion-header-noise"
+            data-section="noise"
             aria-expanded="${openSections.noise ? 'true' : 'false'}"
             aria-controls="accordion-content-noise"
             onClick=${() => toggleSection('noise')}
@@ -1208,6 +1215,7 @@
             type="button"
             className="accordion-header" 
             id="accordion-header-recording"
+            data-section="recording"
             aria-expanded="${openSections.recording ? 'true' : 'false'}"
             aria-controls="accordion-content-recording"
             onClick=${() => toggleSection('recording')}
@@ -1252,6 +1260,7 @@
             type="button"
             className="accordion-header" 
             id="accordion-header-security"
+            data-section="security"
             aria-expanded="${openSections.security ? 'true' : 'false'}"
             aria-controls="accordion-content-security"
             onClick=${() => toggleSection('security')}
