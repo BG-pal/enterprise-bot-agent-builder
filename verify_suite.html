@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Enterprise Bot Comprehensive QA Verification Suite</title>
+  <link rel="stylesheet" href="styles.css?v=2.4">
+</head>
+<body>
+  <div id="root"></div>
+
+  <!-- Runtime Scripts -->
+  <script src="src/engine.js?v=2.4"></script>
+  <script src="src/icons.js?v=2.4"></script>
+  <script src="src/data.js?v=2.4"></script>
+  <script src="src/state.js?v=2.4"></script>
+  <script src="src/components/Sidebar.js?v=2.4"></script>
+  <script src="src/components/Header.js?v=2.4"></script>
+  <script src="src/components/Dashboard.js?v=2.4"></script>
+  <script src="src/components/CreateAgent.js?v=2.4"></script>
+  <script src="src/components/AgentConfigHeader.js?v=2.4"></script>
+  <script src="src/components/PromptConfig.js?v=2.4"></script>
+  <script src="src/components/ToolsConfig.js?v=2.4"></script>
+  <script src="src/components/ModelSettings.js?v=2.4"></script>
+  <script src="src/components/VoiceSettings.js?v=2.4"></script>
+  <script src="src/components/EmailSettings.js?v=2.4"></script>
+  <script src="src/components/TryItModal.js?v=2.4"></script>
+  <script src="src/components/PublishModal.js?v=2.4"></script>
+  <script src="src/app.js?v=2.4"></script>
+
+  <script>
+    async function runQASuite() {
+      const results = [];
+      function assert(desc, passed, detail = '') {
+        const item = { desc, passed, detail };
+        results.push(item);
+        console.log((passed ? '[PASS] ' : '[FAIL] ') + desc + (detail ? ' (' + detail + ')' : ''));
+      }
+
+      try {
+        await new Promise(r => setTimeout(r, 200));
+        const state = window.AppState;
+        const actions = window.AppActions;
+
+        // ==========================================
+        // TEST 1: Discard Changes Snapshot Restoration
+        // ==========================================
+        actions.selectAgent('agent_customer_support');
+        const origPublishedName = state.currentAgent.name;
+        assert('Test 1.1: Start with Published agent', state.currentAgent.status === 'Published');
+        assert('Test 1.2: Initial lastPublishedSnapshot exists', !!state.lastPublishedSnapshot);
+
+        // Edit agent
+        actions.updateCurrentAgent({ name: 'Customer Support V2' });
+        assert('Test 1.3: Agent status after edit is Unsaved changes', state.currentAgent.status === 'Unsaved changes');
+
+        // Save Changes
+        actions.saveChanges();
+        assert('Test 1.4: lastSavedSnapshot updated to V2', state.lastSavedSnapshot.name === 'Customer Support V2');
+        assert('Test 1.5: lastPublishedSnapshot retains original published name', state.lastPublishedSnapshot.name === origPublishedName);
+
+        // Make another edit
+        actions.updateCurrentAgent({ name: 'Customer Support V3' });
+        assert('Test 1.6: Agent name updated to V3', state.currentAgent.name === 'Customer Support V3');
+
+        // Discard Changes
+        actions.discardChanges();
+        assert('Test 1.7: Discard restores original published name', state.currentAgent.name === origPublishedName);
+        assert('Test 1.8: Agent status restored to Published', state.currentAgent.status === 'Published');
+        assert('Test 1.9: lastSavedSnapshot reset to published baseline', state.lastSavedSnapshot.name === origPublishedName);
+
+        // ==========================================
+        // TEST 2: Create Agent Disabled State & Demo Presets
+        // ==========================================
+        actions.setView('create');
+        await new Promise(r => setTimeout(r, 100));
+
+        let btnSubmit = document.getElementById('btn-submit-create');
+        assert('Test 2.1: Create Agent button exists in DOM', !!btnSubmit);
+        assert('Test 2.2: Create Agent button disabled when name is empty', btnSubmit.disabled === true);
+
+        // Enter name
+        const inputName = document.getElementById('input-agent-name');
+        inputName.value = 'New QA Voice Bot';
+        inputName.dispatchEvent(new Event('input', { bubbles: true }));
+        await new Promise(r => setTimeout(r, 100));
+
+        btnSubmit = document.getElementById('btn-submit-create');
+        assert('Test 2.3: Create Agent button enabled when Name and Voice are active', btnSubmit.disabled === false);
+
+        // Test Demo Presets
+        const btnDemo4 = document.getElementById('btn-demo-state-4');
+        assert('Test 2.4: Demo preset button 4 exists', !!btnDemo4);
+        btnDemo4.click();
+        await new Promise(r => setTimeout(r, 100));
+
+        btnSubmit = document.getElementById('btn-submit-create');
+        const nameErrEl = document.querySelector('.invalid-feedback');
+        assert('Test 2.5: Demo State 4 triggers Name Error demonstration', !!nameErrEl && nameErrEl.textContent.includes('Required'));
+        assert('Test 2.6: Create Agent remains disabled during Name Error demo', btnSubmit.disabled === true);
+
+        const btnDemo5 = document.getElementById('btn-demo-state-5');
+        btnDemo5.click();
+        await new Promise(r => setTimeout(r, 100));
+        btnSubmit = document.getElementById('btn-submit-create');
+        assert('Test 2.7: Demo State 5 deselects channels and shows Channel Error', !!document.querySelector('.card-header .invalid-feedback'));
+        assert('Test 2.8: Create Agent remains disabled during Channel Error demo', btnSubmit.disabled === true);
+
+        // ==========================================
+        // TEST 3: Voice Model Override History Summary
+        // ==========================================
+        actions.selectAgent('agent_customer_support');
+        actions.setConfigTab('model');
+        await new Promise(r => setTimeout(r, 100));
+
+        // Enable Voice Model Override
+        actions.updateCurrentAgent({
+          voiceModelOverride: {
+            ...state.currentAgent.voiceModelOverride,
+            enabled: true
+          }
+        });
+        await new Promise(r => setTimeout(r, 100));
+
+        const histToggle = document.getElementById('toggle-voice-history-summary');
+        assert('Test 3.1: Add History Summary toggle exists in DOM', !!histToggle);
+        assert('Test 3.2: Add History Summary is Default ON', histToggle.checked === true);
+
+        const respInput = document.getElementById('input-voice-history-responses');
+        const trigInput = document.getElementById('input-voice-trigger-tokens');
+        const targInput = document.getElementById('input-voice-target-tokens');
+        assert('Test 3.3: Number of History Responses defaults to 5', respInput && Number(respInput.value) === 5);
+        assert('Test 3.4: Trigger Tokens defaults to 15000', trigInput && Number(trigInput.value) === 15000);
+        assert('Test 3.5: Target Tokens defaults to 10000', targInput && Number(targInput.value) === 10000);
+
+        // Toggle OFF hides dependent fields
+        histToggle.click();
+        await new Promise(r => setTimeout(r, 100));
+        const respInputAfterToggle = document.getElementById('input-voice-history-responses');
+        assert('Test 3.6: Turning toggle OFF hides dependent controls', respInputAfterToggle === null);
+
+        // Turn back ON and test validation
+        const histToggleOn = document.getElementById('toggle-voice-history-summary');
+        histToggleOn.click();
+        await new Promise(r => setTimeout(r, 100));
+
+        actions.updateCurrentAgent({
+          voiceModelOverride: {
+            ...state.currentAgent.voiceModelOverride,
+            historyOverride: {
+              enabled: true,
+              historyResponses: 5,
+              triggerTokens: 10000,
+              targetTokens: 12000 // Invalid: target >= trigger
+            }
+          }
+        });
+        let errs = actions.validateAgentConfig(state.currentAgent);
+        assert('Test 3.7: Validation catches Target Tokens >= Trigger Tokens', errs.some(e => e.includes('strictly less than')));
+
+        // Restore valid tokens
+        actions.updateCurrentAgent({
+          voiceModelOverride: {
+            ...state.currentAgent.voiceModelOverride,
+            historyOverride: {
+              enabled: true,
+              historyResponses: 5,
+              triggerTokens: 15000,
+              targetTokens: 10000
+            }
+          }
+        });
+
+        // ==========================================
+        // TEST 4: Silence Timeout Data Handling Independence
+        // ==========================================
+        actions.setConfigTab('voice');
+        await new Promise(r => setTimeout(r, 100));
+
+        // Open Speech accordion
+        actions.toggleVoiceAccordion('speech');
+        await new Promise(r => setTimeout(r, 100));
+
+        // Set General Speech Silence Timeout
+        const initialSTT = JSON.parse(JSON.stringify(state.currentAgent.voiceSettings.speech.stt));
+        actions.updateCurrentAgent({
+          voiceSettings: {
+            ...state.currentAgent.voiceSettings,
+            speech: {
+              ...state.currentAgent.voiceSettings.speech,
+              silenceTimeout: 450
+            }
+          }
+        });
+        assert('Test 4.1: General Speech Silence Timeout updates speech.silenceTimeout to 450', state.currentAgent.voiceSettings.speech.silenceTimeout === 450);
+        assert('Test 4.2: STT segmentationSilenceTimeout remains unchanged (500)', state.currentAgent.voiceSettings.speech.stt.segmentationSilenceTimeout === 500);
+        assert('Test 4.3: STT provider and other settings not overwritten', state.currentAgent.voiceSettings.speech.stt.provider === initialSTT.provider);
+
+        // Set STT Segmentation Silence Timeout
+        actions.updateCurrentAgent({
+          voiceSettings: {
+            ...state.currentAgent.voiceSettings,
+            speech: {
+              ...state.currentAgent.voiceSettings.speech,
+              stt: {
+                ...state.currentAgent.voiceSettings.speech.stt,
+                segmentationSilenceTimeout: 650
+              }
+            }
+          }
+        });
+        assert('Test 4.4: STT segmentationSilenceTimeout updates to 650', state.currentAgent.voiceSettings.speech.stt.segmentationSilenceTimeout === 650);
+        assert('Test 4.5: General Speech Silence Timeout remains independent at 450', state.currentAgent.voiceSettings.speech.silenceTimeout === 450);
+
+        // ==========================================
+        // TEST 5: Tightened Numeric Integer Validation
+        // ==========================================
+        // Non-integer Tool Call Limit
+        actions.updateCurrentAgent({
+          sharedModel: { ...state.currentAgent.sharedModel, toolCallLimit: 3.5 }
+        });
+        errs = actions.validateAgentConfig(state.currentAgent);
+        assert('Test 5.1: Non-integer Tool Call Limit (3.5) rejected', errs.some(e => e.includes('Tool Call Limit must be an integer')));
+
+        // Valid Tool Call Limit without arbitrary maximum
+        actions.updateCurrentAgent({
+          sharedModel: { ...state.currentAgent.sharedModel, toolCallLimit: 50 }
+        });
+        errs = actions.validateAgentConfig(state.currentAgent);
+        assert('Test 5.2: Integer Tool Call Limit (50) accepted without arbitrary max', !errs.some(e => e.includes('Tool Call Limit')));
+
+        // Non-integer DTMF timeout
+        actions.updateCurrentAgent({
+          voiceSettings: {
+            ...state.currentAgent.voiceSettings,
+            dtmf: { ...state.currentAgent.voiceSettings.dtmf, enabled: true, interDigitTimeout: 2000.7 }
+          }
+        });
+        errs = actions.validateAgentConfig(state.currentAgent);
+        assert('Test 5.3: Non-integer DTMF timeout rejected', errs.some(e => e.includes('DTMF inter-digit timeout must be a non-negative integer')));
+
+        // Non-integer Inactivity retries
+        actions.updateCurrentAgent({
+          voiceSettings: {
+            ...state.currentAgent.voiceSettings,
+            inactivity: { ...state.currentAgent.voiceSettings.inactivity, enabled: true, inactivityRetries: 2.2 }
+          }
+        });
+        errs = actions.validateAgentConfig(state.currentAgent);
+        assert('Test 5.4: Non-integer Inactivity retries rejected', errs.some(e => e.includes('Inactivity retry count must be a non-negative integer')));
+
+        // Non-integer Security rate limit
+        actions.updateCurrentAgent({
+          voiceSettings: {
+            ...state.currentAgent.voiceSettings,
+            security: { ...state.currentAgent.voiceSettings.security, rateLimit: 45.8 }
+          }
+        });
+        errs = actions.validateAgentConfig(state.currentAgent);
+        assert('Test 5.5: Non-integer Security rate limit rejected', errs.some(e => e.includes('Security rate limit must be an integer')));
+
+        // Restore clean valid config
+        actions.discardChanges();
+
+        // ==========================================
+        // TEST 6: All Nine Voice Settings Accordions
+        // ==========================================
+        actions.setConfigTab('voice');
+        await new Promise(r => setTimeout(r, 100));
+
+        const sections = ['transcription', 'speech', 'language', 'bargeIn', 'dtmf', 'inactivity', 'noise', 'recording', 'security'];
+        for (const sec of sections) {
+          const btn = document.getElementById('accordion-header-' + sec);
+          assert('Test 6.' + sec + ': Header button exists', !!btn);
+
+          // Click to expand
+          btn.click();
+          await new Promise(r => setTimeout(r, 60));
+          const isOpenAfterClick = state.voiceSettingsUi?.openSections?.[sec];
+          const contentEl = document.getElementById('accordion-content-' + sec);
+          assert('Test 6.' + sec + ': Expands on click', isOpenAfterClick === true && !!contentEl);
+
+          // Click again to collapse
+          btn.click();
+          await new Promise(r => setTimeout(r, 60));
+          const isClosedAfterSecondClick = !state.voiceSettingsUi?.openSections?.[sec];
+          assert('Test 6.' + sec + ': Collapses on second click', isClosedAfterSecondClick === true);
+        }
+
+        // ==========================================
+        // TEST 7: STT Provider & TTS Conditional Controls
+        // ==========================================
+        // Expand speech
+        actions.toggleVoiceAccordion('speech');
+        await new Promise(r => setTimeout(r, 100));
+
+        // Switch to TTS
+        actions.updateCurrentAgent({
+          voiceSettings: {
+            ...state.currentAgent.voiceSettings,
+            speech: {
+              ...state.currentAgent.voiceSettings.speech,
+              activeTab: 'tts',
+              tts: { ...state.currentAgent.voiceSettings.speech.tts, provider: 'Azure' }
+            }
+          }
+        });
+        await new Promise(r => setTimeout(r, 100));
+
+        assert('Test 7.1: Azure TTS selected and controls visible', !!document.getElementById('input-azure-speed') || !!document.querySelector('.form-range'));
+
+        // Switch TTS to ElevenLabs
+        actions.updateCurrentAgent({
+          voiceSettings: {
+            ...state.currentAgent.voiceSettings,
+            speech: {
+              ...state.currentAgent.voiceSettings.speech,
+              tts: { ...state.currentAgent.voiceSettings.speech.tts, provider: 'ElevenLabs' }
+            }
+          }
+        });
+        await new Promise(r => setTimeout(r, 100));
+
+        assert('Test 7.2: ElevenLabs TTS model eleven_flash_v2_5 active', state.currentAgent.voiceSettings.speech.tts.elevenLabs?.model === 'eleven_flash_v2_5');
+
+        // ==========================================
+        // TEST 8: Try It Modal & Call Logs
+        // ==========================================
+        actions.openTryIt('voice');
+        await new Promise(r => setTimeout(r, 100));
+        assert('Test 8.1: Try It modal opens', state.tryItOpen === true);
+
+        // Start call
+        actions.startVoiceCall();
+        await new Promise(r => setTimeout(r, 100));
+        assert('Test 8.2: Voice call starts (state: live)', state.tryIt.voiceState === 'live');
+
+        // End call
+        actions.endVoiceCall('Caller ended call');
+        await new Promise(r => setTimeout(r, 100));
+        assert('Test 8.3: Voice call ends (state: ended)', state.tryIt.voiceState === 'ended');
+        assert('Test 8.4: Call recorded in callHistory', state.tryIt.callHistory.length > 0);
+
+        // Toggle Call Logs
+        actions.toggleCallLogs();
+        await new Promise(r => setTimeout(r, 100));
+        assert('Test 8.5: Call Logs drawer opens', state.tryIt.callLogsOpen === true);
+
+        // Close Try It
+        actions.closeTryIt();
+
+        // Output summary
+        const passedCount = results.filter(r => r.passed).length;
+        const failedCount = results.filter(r => !r.passed).length;
+        console.log(`\n========================================`);
+        console.log(`FINAL RESULTS: ${passedCount} PASSED, ${failedCount} FAILED out of ${results.length} assertions.`);
+        console.log(`========================================`);
+
+        const summaryEl = document.createElement('div');
+        summaryEl.id = 'qa-summary';
+        summaryEl.setAttribute('data-passed', passedCount);
+        summaryEl.setAttribute('data-failed', failedCount);
+        summaryEl.innerHTML = `
+          <h2>QA Results: ${passedCount} Passed, ${failedCount} Failed</h2>
+          <ul>${results.map(r => `<li style="color:${r.passed ? 'green' : 'red'}">${r.passed ? '✓' : '✗'} ${r.desc}</li>`).join('')}</ul>
+        `;
+        document.body.appendChild(summaryEl);
+      } catch (err) {
+        console.error('QA Test Suite Exception:', err);
+        const errEl = document.createElement('div');
+        errEl.id = 'qa-error';
+        errEl.textContent = err.stack || String(err);
+        document.body.appendChild(errEl);
+      }
+    }
+    window.addEventListener('DOMContentLoaded', runQASuite);
+  </script>
+</body>
+</html>

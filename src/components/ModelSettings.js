@@ -194,8 +194,9 @@
                   <input 
                     type="number" 
                     className="form-input" 
+                    min="1"
                     value=${agent.sharedModel.historyResponses}
-                    onInput=${(e) => updateShared('historyResponses', parseInt(e.target.value, 10) || 1)}
+                    onInput=${(e) => updateShared('historyResponses', e.target.value === '' ? '' : parseInt(e.target.value, 10))}
                   />
                   <div className="helper-text">Default 10</div>
                 </div>
@@ -205,9 +206,9 @@
                   <input 
                     type="number" 
                     className="form-input" 
-                    step="500"
+                    step="500" min="1"
                     value=${agent.sharedModel.triggerTokens}
-                    onInput=${(e) => updateShared('triggerTokens', parseInt(e.target.value, 10) || 1000)}
+                    onInput=${(e) => updateShared('triggerTokens', e.target.value === '' ? '' : parseInt(e.target.value, 10))}
                   />
                   <div className="helper-text">Default 8000</div>
                 </div>
@@ -217,9 +218,9 @@
                   <input 
                     type="number" 
                     className="form-input" 
-                    step="500"
+                    step="500" min="1"
                     value=${agent.sharedModel.targetTokens}
-                    onInput=${(e) => updateShared('targetTokens', parseInt(e.target.value, 10) || 1000)}
+                    onInput=${(e) => updateShared('targetTokens', e.target.value === '' ? '' : parseInt(e.target.value, 10))}
                   />
                   <div className="helper-text">Keep Target approx 50–70% of Trigger.</div>
                 </div>
@@ -453,18 +454,22 @@
                   </div>
                 ` : ''}
 
-                <!-- Voice History Override -->
+                <!-- Voice History Override: Add History Summary (Default ON) -->
                 <div style="padding-top: 14px; border-top: 1px solid var(--border-color);">
                   <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
                     <div>
-                      <div style="font-weight: 700; font-size: 14px; color: var(--text-primary);">Voice History Summary</div>
-                      <div className="text-secondary" style="font-size: 13px;">Condense multi-turn conversation context for voice calls.</div>
+                      <div style="font-weight: 700; font-size: 14px; color: var(--text-primary);">Add History Summary</div>
+                      <div className="text-secondary" style="font-size: 13px;">Condense multi-turn conversation context for voice calls. Default ON.</div>
                     </div>
                     <label className="toggle-switch">
                       <input 
                         type="checkbox" 
+                        id="toggle-voice-history-summary"
                         checked=${agent.voiceModelOverride.historyOverride?.enabled ?? true}
                         onChange=${(e) => updateVoiceOverride('historyOverride', {
+                          historyResponses: 5,
+                          triggerTokens: 15000,
+                          targetTokens: 10000,
                           ...agent.voiceModelOverride.historyOverride,
                           enabled: e.target.checked
                         })}
@@ -476,40 +481,58 @@
                   ${(agent.voiceModelOverride.historyOverride?.enabled ?? true) ? html`
                     <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px;">
                       <div>
-                        <label className="form-label">Responses</label>
+                        <label className="form-label">Number of History Responses</label>
                         <input 
                           type="number" 
                           className="form-input" 
-                          value=${agent.voiceModelOverride.historyOverride.historyResponses}
+                          id="input-voice-history-responses"
+                          value=${agent.voiceModelOverride.historyOverride?.historyResponses ?? 5}
                           onInput=${(e) => {
-                            const val = parseInt(e.target.value, 10) || 5;
-                            updateVoiceOverride('historyOverride', { ...agent.voiceModelOverride.historyOverride, historyResponses: val });
+                            const val = e.target.value === '' ? '' : parseInt(e.target.value, 10);
+                            updateVoiceOverride('historyOverride', { 
+                              triggerTokens: 15000,
+                              targetTokens: 10000,
+                              ...agent.voiceModelOverride.historyOverride, 
+                              historyResponses: val 
+                            });
                           }}
                         />
                         <div className="helper-text">Default 5</div>
                       </div>
                       <div>
-                        <label className="form-label">Trigger tokens</label>
+                        <label className="form-label">Trigger Tokens</label>
                         <input 
                           type="number" 
                           className="form-input" 
-                          value=${agent.voiceModelOverride.historyOverride.triggerTokens}
+                          id="input-voice-trigger-tokens"
+                          value=${agent.voiceModelOverride.historyOverride?.triggerTokens ?? 15000}
                           onInput=${(e) => {
-                            const val = parseInt(e.target.value, 10) || 15000;
-                            updateVoiceOverride('historyOverride', { ...agent.voiceModelOverride.historyOverride, triggerTokens: val });
+                            const val = e.target.value === '' ? '' : parseInt(e.target.value, 10);
+                            updateVoiceOverride('historyOverride', { 
+                              historyResponses: 5,
+                              targetTokens: 10000,
+                              ...agent.voiceModelOverride.historyOverride, 
+                              triggerTokens: val 
+                            });
                           }}
                         />
                         <div className="helper-text">Default 15000</div>
                       </div>
                       <div>
-                        <label className="form-label">Target tokens</label>
+                        <label className="form-label">Target Tokens</label>
                         <input 
                           type="number" 
                           className="form-input" 
-                          value=${agent.voiceModelOverride.historyOverride.targetTokens}
+                          id="input-voice-target-tokens"
+                          value=${agent.voiceModelOverride.historyOverride?.targetTokens ?? 10000}
                           onInput=${(e) => {
-                            const val = parseInt(e.target.value, 10) || 10000;
-                            updateVoiceOverride('historyOverride', { ...agent.voiceModelOverride.historyOverride, targetTokens: val });
+                            const val = e.target.value === '' ? '' : parseInt(e.target.value, 10);
+                            updateVoiceOverride('historyOverride', { 
+                              historyResponses: 5,
+                              triggerTokens: 15000,
+                              ...agent.voiceModelOverride.historyOverride, 
+                              targetTokens: val 
+                            });
                           }}
                         />
                         <div className="helper-text">Default 10000</div>

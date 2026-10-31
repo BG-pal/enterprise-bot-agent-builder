@@ -117,17 +117,33 @@
       });
     }
 
-    // Validation status check: Name required and Voice must be selected
-    const isFormInvalid = !name.trim() || !voiceOn;
+    // Validation status check: Name required and at least one channel (Voice or Email) must be selected
+    const isFormInvalid = !name.trim() || (!voiceOn && !emailOn);
 
     return html`
       <div className="content-container" style="max-width: 860px;">
         <!-- Page Header -->
-        <div style="margin-bottom: 28px;">
+        <div style="margin-bottom: 24px;">
           <h1 className="heading-xl">Create a new agent</h1>
           <p className="text-secondary" style="margin-top: 6px; font-size: 15px;">
             Set up your AI agent with the basic details to get started.
           </p>
+        </div>
+
+        <!-- Evaluation Demo Presets Toolbar (Assignment Section 7 Verification) -->
+        <div style="background: #F8FAFC; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 10px 14px; margin-bottom: 24px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+          <div style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: var(--text-secondary);">
+            ${renderIcon('sparkles', { size: 14, color: 'var(--color-primary)' })}
+            <span>Demo Evaluation States:</span>
+          </div>
+          <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+            <button type="button" className="btn btn-secondary btn-sm" style="font-size: 11px; padding: 4px 8px;" onClick=${() => applyState(1)} id="btn-demo-state-1">1. Default</button>
+            <button type="button" className="btn btn-secondary btn-sm" style="font-size: 11px; padding: 4px 8px;" onClick=${() => applyState(2)} id="btn-demo-state-2">2. Realtime</button>
+            <button type="button" className="btn btn-secondary btn-sm" style="font-size: 11px; padding: 4px 8px;" onClick=${() => applyState(3)} id="btn-demo-state-3">3. Email Only</button>
+            <button type="button" className="btn btn-secondary btn-sm" style="font-size: 11px; padding: 4px 8px;" onClick=${() => applyState(4)} id="btn-demo-state-4">4. Name Error</button>
+            <button type="button" className="btn btn-secondary btn-sm" style="font-size: 11px; padding: 4px 8px;" onClick=${() => applyState(5)} id="btn-demo-state-5">5. Channel Error</button>
+            <button type="button" className="btn btn-secondary btn-sm" style="font-size: 11px; padding: 4px 8px;" onClick=${() => applyState(6)} id="btn-demo-state-6">6. Chat Unavailable</button>
+          </div>
         </div>
 
         <!-- ================= SECTION A: CHANNEL SELECTION ================= -->
@@ -413,9 +429,9 @@
           <button 
             className="btn btn-primary btn-lg"
             onClick=${handleCreate}
-            disabled=${isSubmitting}
+            disabled=${isFormInvalid || isSubmitting}
             id="btn-submit-create"
-            title="Create agent"
+            title="${isFormInvalid ? 'Enter an agent name and select at least one channel to enable creation' : 'Create agent'}"
           >
             ${isSubmitting ? html`
               <span className="pulsing-dot" style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #FFFFFF; margin-right: 6px;"></span>

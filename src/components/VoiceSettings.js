@@ -434,8 +434,7 @@
                               ...agent.voiceSettings,
                               speech: {
                                 ...agent.voiceSettings.speech,
-                                silenceTimeout: parseInt(e.target.value, 10) || 400,
-                                stt: { ...agent.voiceSettings.speech.stt, silenceTimeout: parseInt(e.target.value, 10) || 400 }
+                                silenceTimeout: parseInt(e.target.value, 10) || 400
                               }
                             }
                           })}
@@ -973,9 +972,9 @@
                     <input 
                       type="number" 
                       className="form-input" 
-                      step="500"
+                      step="500" min="0"
                       value=${agent.voiceSettings.dtmf.interDigitTimeout}
-                      onInput=${(e) => updateVoice('dtmf', 'interDigitTimeout', parseInt(e.target.value, 10) || 3000)}
+                      onInput=${(e) => updateVoice('dtmf', 'interDigitTimeout', e.target.value === '' ? '' : parseInt(e.target.value, 10))}
                     />
                     <div className="helper-text">Default: 3000 ms</div>
                   </div>
@@ -985,8 +984,9 @@
                     <input 
                       type="number" 
                       className="form-input" 
+                      min="1"
                       value=${agent.voiceSettings.dtmf.maxDigits}
-                      onInput=${(e) => updateVoice('dtmf', 'maxDigits', parseInt(e.target.value, 10) || 10)}
+                      onInput=${(e) => updateVoice('dtmf', 'maxDigits', e.target.value === '' ? '' : parseInt(e.target.value, 10))}
                     />
                     <div className="helper-text">Default: 10 digits</div>
                   </div>
@@ -1058,27 +1058,27 @@
                     <div>
                       <label className="form-label">Initial Wait Time (ms)</label>
                       <input 
-                        type="number" className="form-input" step="500"
+                        type="number" className="form-input" step="500" min="0"
                         value=${agent.voiceSettings.inactivity.initialWaitTime}
-                        onInput=${(e) => updateVoice('inactivity', 'initialWaitTime', parseInt(e.target.value, 10) || 5000)}
+                        onInput=${(e) => updateVoice('inactivity', 'initialWaitTime', e.target.value === '' ? '' : parseInt(e.target.value, 10))}
                       />
                       <div className="helper-text">Default 5000 ms</div>
                     </div>
                     <div>
                       <label className="form-label">Retry Interval (ms)</label>
                       <input 
-                        type="number" className="form-input" step="500"
+                        type="number" className="form-input" step="500" min="0"
                         value=${agent.voiceSettings.inactivity.retryInterval}
-                        onInput=${(e) => updateVoice('inactivity', 'retryInterval', parseInt(e.target.value, 10) || 8000)}
+                        onInput=${(e) => updateVoice('inactivity', 'retryInterval', e.target.value === '' ? '' : parseInt(e.target.value, 10))}
                       />
                       <div className="helper-text">Default 8000 ms</div>
                     </div>
                     <div>
                       <label className="form-label">Inactivity Retries</label>
                       <input 
-                        type="number" className="form-input" min="1" max="5"
+                        type="number" className="form-input" min="0"
                         value=${agent.voiceSettings.inactivity.inactivityRetries}
-                        onInput=${(e) => updateVoice('inactivity', 'inactivityRetries', parseInt(e.target.value, 10) || 2)}
+                        onInput=${(e) => updateVoice('inactivity', 'inactivityRetries', e.target.value === '' ? '' : parseInt(e.target.value, 10))}
                       />
                       <div className="helper-text">Default 2</div>
                     </div>
@@ -1304,8 +1304,9 @@
                   <input 
                     type="number" 
                     className="form-input" 
+                    min="1"
                     value=${agent.voiceSettings.security.rateLimit}
-                    onInput=${(e) => updateVoice('security', 'rateLimit', parseInt(e.target.value, 10) || 30)}
+                    onInput=${(e) => updateVoice('security', 'rateLimit', e.target.value === '' ? '' : parseInt(e.target.value, 10))}
                   />
                   <div className="helper-text">Default 30 requests</div>
                 </div>

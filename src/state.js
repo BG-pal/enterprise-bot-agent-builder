@@ -176,24 +176,29 @@
     }
     const currentStr = JSON.stringify(state.currentAgent);
     const savedStr = JSON.stringify(state.lastSavedSnapshot);
+    const publishedStr = state.lastPublishedSnapshot ? JSON.stringify(state.lastPublishedSnapshot) : null;
+
     const isDirty = currentStr !== savedStr;
     state.hasUnsavedChanges = isDirty;
-    if (isDirty) {
-      if (state.lastPublishedSnapshot) {
+
+    if (publishedStr) {
+      if (currentStr !== publishedStr) {
         state.currentAgent.status = 'Unsaved changes';
+      } else {
+        state.currentAgent.status = 'Published';
       }
     } else {
-      if (state.lastPublishedSnapshot) {
-        state.currentAgent.status = 'Published';
-      } else {
-        state.currentAgent.status = 'Draft';
-      }
+      state.currentAgent.status = 'Draft';
     }
   }
 
   function validateAgentConfig(agent) {
     if (!agent) return ['No agent selected.'];
     const errors = [];
+
+    const isIntegerGte1 = (v) => v !== '' && v !== null && v !== undefined && Number.isInteger(Number(v)) && Number(v) >= 1;
+    const isIntegerGte0 = (v) => v !== '' && v !== null && v !== undefined && Number.isInteger(Number(v)) && Number(v) >= 0;
+    const isPositiveInteger = (v) => v !== '' && v !== null && v !== undefined && Number.isInteger(Number(v)) && Number(v) > 0;
 
     // 1. General & Channels
     if (!agent.name || !agent.name.trim()) {
@@ -214,21 +219,23 @@
       if (isNaN(temp) || temp < 0 || temp > 1) {
         errors.push('Shared Model Temperature must be between 0.0 and 1.0.');
       }
-      const limit = Number(agent.sharedModel.toolCallLimit);
-      if (isNaN(limit) || limit < 1) {
+      if (!isIntegerGte1(agent.sharedModel.toolCallLimit)) {
         errors.push('Tool Call Limit must be an integer greater than or equal to 1.');
       }
       if (agent.sharedModel.historySummaryEnabled) {
-        const trig = Number(agent.sharedModel.triggerTokens);
-        const targ = Number(agent.sharedModel.targetTokens);
-        if (isNaN(trig) || trig <= 0) {
-          errors.push('Trigger tokens must be a positive integer.');
+        if (!isIntegerGte1(agent.sharedModel.historyResponses)) {
+          errors.push('History Responses must be an integer greater than or equal to 1.');
         }
-        if (isNaN(targ) || targ <= 0) {
-          errors.push('Target tokens must be a positive integer.');
+        if (!isPositiveInteger(agent.sharedModel.triggerTokens)) {
+          errors.push('Trigger Tokens must be a positive integer.');
         }
-        if (!isNaN(trig) && !isNaN(targ) && targ >= trig) {
-          errors.push('History Management target tokens must be strictly less than trigger tokens.');
+        if (!isPositiveInteger(agent.sharedModel.targetTokens)) {
+          errors.push('Target Tokens must be a positive integer.');
+        }
+        if (isPositiveInteger(agent.sharedModel.triggerTokens) && isPositiveInteger(agent.sharedModel.targetTokens)) {
+          if (Number(agent.sharedModel.targetTokens) >= Number(agent.sharedModel.triggerTokens)) {
+            errors.push('Target Tokens must be strictly less than Trigger Tokens.');
+          }
         }
       }
     }
@@ -242,22 +249,24 @@
         }
       }
       if (agent.voiceModelOverride.toolCallLimit !== 'Inherited') {
-        const limit = Number(agent.voiceModelOverride.toolCallLimit);
-        if (isNaN(limit) || limit < 1) {
+        if (!isIntegerGte1(agent.voiceModelOverride.toolCallLimit)) {
           errors.push('Voice Override Tool Call Limit must be an integer >= 1.');
         }
       }
       if (agent.voiceModelOverride.historyOverride?.enabled) {
-        const vTrig = Number(agent.voiceModelOverride.historyOverride.triggerTokens);
-        const vTarg = Number(agent.voiceModelOverride.historyOverride.targetTokens);
-        if (isNaN(vTrig) || vTrig <= 0) {
-          errors.push('Voice history trigger tokens must be a positive integer.');
+        if (!isIntegerGte1(agent.voiceModelOverride.historyOverride.historyResponses)) {
+          errors.push('Number of History Responses must be an integer >= 1.');
         }
-        if (isNaN(vTarg) || vTarg <= 0) {
-          errors.push('Voice history target tokens must be a positive integer.');
+        if (!isPositiveInteger(agent.voiceModelOverride.historyOverride.triggerTokens)) {
+          errors.push('Trigger Tokens must be a positive integer.');
         }
-        if (!isNaN(vTrig) && !isNaN(vTarg) && vTarg >= vTrig) {
-          errors.push('Voice history target tokens must be strictly less than trigger tokens.');
+        if (!isPositiveInteger(agent.voiceModelOverride.historyOverride.targetTokens)) {
+          errors.push('Target Tokens must be a positive integer.');
+        }
+        if (isPositiveInteger(agent.voiceModelOverride.historyOverride.triggerTokens) && isPositiveInteger(agent.voiceModelOverride.historyOverride.targetTokens)) {
+          if (Number(agent.voiceModelOverride.historyOverride.targetTokens) >= Number(agent.voiceModelOverride.historyOverride.triggerTokens)) {
+            errors.push('Voice Target Tokens must be strictly less than Trigger Tokens.');
+          }
         }
       }
     }
@@ -279,33 +288,34 @@
           if (!vs.speech?.tts?.provider || !vs.speech.tts.provider.trim()) {
             errors.push('TTS Provider is required.');
           }
+          if (vs.speech?.silenceTimeout !== undefined && !isIntegerGte0(vs.speech.silenceTimeout)) {
+            errors.push('General Speech Silence Timeout must be a non-negative integer.');
+          }
+          if (vs.speech?.stt?.segmentationSilenceTimeout !== undefined && !isIntegerGte0(vs.speech.stt.segmentationSilenceTimeout)) {
+            errors.push('STT Segmentation Silence Timeout must be a non-negative integer.');
+          }
         }
 
         // DTMF Keypad
         if (vs.dtmf?.enabled) {
-          const timeout = Number(vs.dtmf.interDigitTimeout);
-          if (isNaN(timeout) || timeout < 0) {
+          if (!isIntegerGte0(vs.dtmf.interDigitTimeout)) {
             errors.push('DTMF inter-digit timeout must be a non-negative integer.');
           }
-          const maxD = Number(vs.dtmf.maxDigits);
-          if (isNaN(maxD) || maxD < 1) {
+          if (!isIntegerGte1(vs.dtmf.maxDigits)) {
             errors.push('DTMF maximum digits must be an integer >= 1.');
           }
         }
 
         // Inactivity
         if (vs.inactivity?.enabled) {
-          const wait = Number(vs.inactivity.initialWaitTime);
-          if (isNaN(wait) || wait < 0) {
+          if (!isIntegerGte0(vs.inactivity.initialWaitTime)) {
             errors.push('Inactivity initial wait time must be a non-negative integer.');
           }
-          const retry = Number(vs.inactivity.retryInterval);
-          if (isNaN(retry) || retry < 0) {
+          if (!isIntegerGte0(vs.inactivity.retryInterval)) {
             errors.push('Inactivity retry interval must be a non-negative integer.');
           }
-          const retries = Number(vs.inactivity.inactivityRetries);
-          if (isNaN(retries) || retries < 0) {
-            errors.push('Inactivity retries must be a non-negative integer.');
+          if (!isIntegerGte0(vs.inactivity.inactivityRetries)) {
+            errors.push('Inactivity retry count must be a non-negative integer.');
           }
           if (vs.inactivity.retryPromptMode === 'Fixed prompt') {
             if (!vs.inactivity.inactivityPrompt || !vs.inactivity.inactivityPrompt.trim()) {
@@ -316,12 +326,10 @@
 
         // Security
         if (vs.security) {
-          const rate = Number(vs.security.rateLimit);
-          if (isNaN(rate) || rate < 1) {
-            errors.push('Security rate limit must be a positive integer.');
+          if (!isIntegerGte1(vs.security.rateLimit)) {
+            errors.push('Security rate limit must be an integer >= 1.');
           }
-          const ret = Number(vs.security.dataRetentionDays);
-          if (isNaN(ret) || ret < 0) {
+          if (!isIntegerGte0(vs.security.dataRetentionDays)) {
             errors.push('Security data retention must be a non-negative integer.');
           }
           if (Array.isArray(vs.security.allowedDomains)) {
@@ -363,7 +371,9 @@
         state.currentAgent = clone(found);
         state.lastSavedSnapshot = clone(found);
         state.savedSnapshot = clone(found);
-        state.lastPublishedSnapshot = found.status === 'Published' ? clone(found) : null;
+        state.lastPublishedSnapshot = found.status === 'Published'
+          ? clone(found)
+          : (found.lastPublishedConfig ? clone(found.lastPublishedConfig) : (found.publishedAt ? clone(found) : null));
         state.hasUnsavedChanges = false;
         state.currentView = 'configure';
         state.configTab = 'overview';
@@ -390,8 +400,11 @@
       state.lastSavedSnapshot = clone(state.currentAgent);
       state.savedSnapshot = clone(state.currentAgent);
       state.hasUnsavedChanges = false;
+
+      // Maintain status tracking relative to production published state
       if (state.lastPublishedSnapshot) {
-        state.currentAgent.status = 'Published';
+        const isIdenticalToPublished = JSON.stringify(state.currentAgent) === JSON.stringify(state.lastPublishedSnapshot);
+        state.currentAgent.status = isIdenticalToPublished ? 'Published' : 'Unsaved changes';
       } else {
         state.currentAgent.status = 'Draft';
       }
@@ -401,17 +414,39 @@
       if (idx !== -1) {
         state.agents[idx] = clone(state.currentAgent);
       }
-      addToast('Changes saved successfully!', 'success');
+      addToast('Working configuration saved.', 'success');
       notify();
       return true;
     },
 
     discardChanges() {
-      if (!state.lastSavedSnapshot) return;
-      state.currentAgent = clone(state.lastSavedSnapshot);
+      // Requirement 1: Discard Changes restores lastPublishedSnapshot for published agents
+      const targetSnapshot = state.lastPublishedSnapshot || state.lastSavedSnapshot;
+      if (!targetSnapshot) return;
+
+      state.currentAgent = clone(targetSnapshot);
+      state.lastSavedSnapshot = clone(targetSnapshot);
+      state.savedSnapshot = clone(targetSnapshot);
       state.hasUnsavedChanges = false;
       state.discardModalOpen = false;
-      addToast('Unsaved changes discarded. Restored previous configuration.', 'info');
+
+      if (state.lastPublishedSnapshot) {
+        state.currentAgent.status = 'Published';
+      } else {
+        state.currentAgent.status = 'Draft';
+      }
+
+      const idx = state.agents.findIndex(a => a.id === state.currentAgent.id);
+      if (idx !== -1) {
+        state.agents[idx] = clone(state.currentAgent);
+      }
+
+      addToast(
+        state.lastPublishedSnapshot
+          ? 'Discarded changes. Restored last published configuration.'
+          : 'Discarded unsaved changes. Restored saved configuration.',
+        'info'
+      );
       notify();
     },
 
@@ -449,6 +484,7 @@
         state.currentAgent.publishedAt = new Date().toISOString();
         state.currentAgent.updatedAt = new Date().toISOString();
 
+        state.currentAgent.lastPublishedConfig = clone(state.currentAgent);
         state.lastPublishedSnapshot = clone(state.currentAgent);
         state.lastSavedSnapshot = clone(state.currentAgent);
         state.savedSnapshot = clone(state.currentAgent);

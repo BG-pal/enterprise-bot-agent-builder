@@ -78,13 +78,13 @@
 
         <!-- Global Configuration Header Actions -->
         <div style="display: flex; align-items: center; gap: 10px;">
-          <!-- Discard changes (visible when unsaved changes exist) -->
-          ${state.hasUnsavedChanges ? html`
+          <!-- Discard changes (visible when changes exist relative to saved or published snapshot) -->
+          ${(state.hasUnsavedChanges || (state.lastPublishedSnapshot && JSON.stringify(state.currentAgent) !== JSON.stringify(state.lastPublishedSnapshot))) ? html`
             <button 
               className="btn btn-secondary btn-sm"
               onClick=${() => { state.discardModalOpen = true; window.scheduleRender(); }}
               id="btn-discard-changes"
-              title="Revert all unsaved changes"
+              title="Revert all changes to last published configuration"
             >
               ${renderIcon('refresh-cw', { size: 14 })}
               <span>Discard Changes</span>
