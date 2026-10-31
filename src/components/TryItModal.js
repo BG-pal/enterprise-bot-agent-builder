@@ -229,7 +229,7 @@
                         <strong style="font-size: 14px; color: var(--text-primary);">${tryIt.callEndedBy || 'Caller ended the call'}</strong>
                       </div>
                       <div style="font-size: 12px; color: var(--text-secondary); margin-top: 3px;">
-                        Total Call Duration: <strong>${formatTimer(tryIt.callSeconds)}</strong> · Turns Recorded: <strong>${tryIt.voiceTurns.length}</strong>
+                        Total Call Duration: <strong>${formatTimer(tryIt.callSeconds || 0)}</strong> · Turns Recorded: <strong>${(tryIt.voiceTurns || []).length}</strong>
                       </div>
                     </div>
                     

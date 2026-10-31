@@ -85,7 +85,7 @@
 
       // Validate name
       if (!name.trim()) {
-        setNameError('Agent name is required.');
+        setNameError('Required');
         hasError = true;
         const el = document.getElementById('input-agent-name');
         if (el) el.focus();
@@ -93,8 +93,8 @@
         setNameError('');
       }
 
-      // Validate voice channel is selected
-      if (!voiceOn) {
+      // Validate at least one channel is selected
+      if (!voiceOn && !emailOn) {
         setChannelError('Select at least one channel to create an agent.');
         hasError = true;
       } else {
@@ -105,10 +105,10 @@
 
       setIsSubmitting(true);
 
-      // Create new agent with Voice as active channel
+      // Create new agent with selected channels
       actions.createNewAgent({
         name: name.trim(),
-        channels: { voice: true, email: false, chat: false },
+        channels: { voice: voiceOn, email: emailOn, chat: false },
         speechStack: speechStack || 'cascaded',
         language,
         description,
@@ -245,30 +245,41 @@
               </div>
             ` : ''}
 
-            <!-- EMAIL CHANNEL CARD (Preserved visually, marked Phase 2 per scope) -->
+            <!-- EMAIL CHANNEL CARD -->
             <div 
-              className="selection-card disabled"
-              style="cursor: not-allowed; opacity: 0.65;"
+              className="selection-card ${emailOn ? 'selected' : ''}"
+              onClick=${() => {
+                const next = !emailOn;
+                setEmailOn(next);
+                if (next) setChannelError('');
+              }}
+              style="cursor: pointer;"
               id="card-channel-email"
-              title="Email channel configuration is out of scope for this Voice prototype"
+              title="Toggle Email Channel"
             >
               <div style="display: flex; align-items: center; gap: 16px;">
-                <div style="width: 44px; height: 44px; border-radius: var(--radius-md); background: #F3F4F6; display: flex; align-items: center; justify-content: center; color: var(--text-muted); flex-shrink: 0;">
+                <div style="width: 44px; height: 44px; border-radius: var(--radius-md); background: ${emailOn ? 'var(--color-primary-light)' : '#F3F4F6'}; display: flex; align-items: center; justify-content: center; color: ${emailOn ? 'var(--color-primary)' : 'var(--text-muted)'}; flex-shrink: 0;">
                   ${renderIcon('mail', { size: 22 })}
                 </div>
                 <div>
-                  <div style="font-weight: 700; font-size: 15px; color: var(--text-secondary); display: flex; align-items: center; gap: 8px;">
+                  <div style="font-weight: 700; font-size: 15px; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
                     <span>Email</span>
-                    <span className="badge badge-draft" style="font-size: 11px;">Phase 2</span>
                   </div>
                   <div className="text-secondary" style="font-size: 13px; margin-top: 2px;">
-                    Replies from a mailbox. <span style="color: var(--text-muted); font-size: 12px;">(Out of scope for Voice-focused prototype)</span>
+                    Replies from a mailbox. Mailbox is connected after creation.
                   </div>
                 </div>
               </div>
 
-              <label className="toggle-switch" style="pointer-events: none; opacity: 0.5;">
-                <input type="checkbox" disabled checked=${false} tabIndex="-1" />
+              <label className="toggle-switch" onClick=${(e) => e.stopPropagation()}>
+                <input 
+                  type="checkbox" 
+                  checked=${emailOn} 
+                  onChange=${(e) => {
+                    setEmailOn(e.target.checked);
+                    if (e.target.checked) setChannelError('');
+                  }}
+                />
                 <span className="toggle-slider"></span>
               </label>
             </div>
@@ -322,6 +333,9 @@
               className="form-input ${nameError ? 'is-invalid' : ''}" 
               placeholder="Enter agent name"
               value=${name}
+              onBlur=${() => {
+                if (!name.trim()) setNameError('Required');
+              }}
               onInput=${(e) => {
                 setName(e.target.value);
                 if (e.target.value.trim()) setNameError('');
@@ -410,7 +424,11 @@
           </div>
           <div style="font-size: 13px; color: var(--text-secondary); line-height: 1.5;">
             <strong style="color: var(--text-primary); display: block; margin-bottom: 2px;">Next steps after creation:</strong>
-            <span>Your Voice agent will land in <strong>Behaviour › Prompts</strong> to tune instructions, speech response rules, and call transfer guidelines.</span>
+            ${emailOn && !voiceOn ? html`
+              <span>Your Email agent will land in <strong>Email › Inbox</strong> to connect a mailbox and configure email threading.</span>
+            ` : html`
+              <span>Your Voice agent will land in <strong>Behaviour › Prompts</strong> to tune instructions, speech response rules, and call transfer guidelines.</span>
+            `}
           </div>
         </div>
 

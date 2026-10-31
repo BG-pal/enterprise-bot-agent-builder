@@ -527,7 +527,12 @@
 
       // After-create routing as strictly specified in assignment:
       // - Voice-only agent -> Behaviour -> Prompts
-      state.configTab = 'prompt';
+      // - Email picked -> Email -> Inbox
+      if (newAgent.channels?.email && !newAgent.channels?.voice) {
+        state.configTab = 'email';
+      } else {
+        state.configTab = 'prompt';
+      }
 
       addToast(`Agent "${newAgent.name}" created as Draft!`, 'success');
       notify();

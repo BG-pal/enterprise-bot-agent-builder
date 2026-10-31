@@ -57,6 +57,7 @@
                   ${state.configTab === 'tools' ? window.ToolsConfig() : ''}
                   ${state.configTab === 'model' ? window.ModelSettings() : ''}
                   ${state.configTab === 'voice' ? window.VoiceSettings() : ''}
+                  ${state.configTab === 'email' ? window.EmailSettings() : ''}
                 </main>
               </div>
             </div>

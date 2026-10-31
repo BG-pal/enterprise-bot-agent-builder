@@ -142,9 +142,15 @@
       { id: 'overview', label: 'Overview', icon: 'sliders' },
       { id: 'prompt', label: 'Prompt', icon: 'file-text' },
       { id: 'tools', label: 'Tools', icon: 'wrench' },
-      { id: 'model', label: 'Model Settings', icon: 'cpu' },
-      { id: 'voice', label: 'Voice Settings', icon: 'volume-2' }
+      { id: 'model', label: 'Model Settings', icon: 'cpu' }
     ];
+
+    if (agent.channels?.voice) {
+      navItems.push({ id: 'voice', label: 'Voice Settings', icon: 'volume-2' });
+    }
+    if (agent.channels?.email) {
+      navItems.push({ id: 'email', label: 'Email Settings', icon: 'mail' });
+    }
 
     return html`
       <div className="config-sidebar" aria-label="Configuration Sections">
@@ -192,10 +198,18 @@
               Active Channels
             </div>
             <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px;">
-              <span className="badge-channel" style="background: #EEF2FF; color: var(--color-primary); border: 1px solid #C7D2FE;">
-                ${renderIcon('phone', { size: 14, color: 'var(--color-primary)' })}
-                <span>Voice (${(agent.voiceModelOverride?.enabled ? agent.voiceModelOverride.speechStack : agent.speechStack) === 'realtime' ? 'Realtime Voice' : 'Cascaded STT/TTS'})</span>
-              </span>
+              ${agent.channels?.voice ? html`
+                <span className="badge-channel" style="background: #EEF2FF; color: var(--color-primary); border: 1px solid #C7D2FE;">
+                  ${renderIcon('phone', { size: 14, color: 'var(--color-primary)' })}
+                  <span>Voice (${(agent.voiceModelOverride?.enabled ? agent.voiceModelOverride.speechStack : agent.speechStack) === 'realtime' ? 'Realtime Voice' : 'Cascaded STT/TTS'})</span>
+                </span>
+              ` : ''}
+              ${agent.channels?.email ? html`
+                <span className="badge-channel" style="background: #FEF3C7; color: #92400E; border: 1px solid #FCD34D;">
+                  ${renderIcon('mail', { size: 14, color: '#D97706' })}
+                  <span>Email (Mailbox)</span>
+                </span>
+              ` : ''}
             </div>
             <div style="font-size: 13px; color: var(--text-secondary);">
               Primary Language: <strong>${agent.language || 'English (US)'}</strong>
